@@ -71,7 +71,6 @@ setup(
     # above.
     author_email='max.mahlke@cab.inta-csic.es',  # Optional
 
-
     # You can just specify package directories manually here if your project is
     # simple. Or you can use find_packages().
     #
@@ -100,4 +99,5 @@ setup(
         'Bug Reports': 'https://github.com/maxmahlke/SSO_Pipeline/issues',
         'Source': 'https://github.com/maxmahlke/SSO_Pipeline/',
         'Docs': 'https://sso-pipeline.readthedocs.io/en/latest/'
-},
+    }
+    )
