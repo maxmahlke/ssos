@@ -46,7 +46,12 @@ To tackle this problem, the `IDENTIFY_OUTLIER` option was introduced. If `True`,
 
    \mathrm{MAD} = \mathrm{median}(|E_{i} - \mathrm{median}(E)|)
 
-This calculates the median duration between one observation and the median observation epoch. The median is not affected by outliers, therefore it can be used to identify jumps in the epochs. If the time difference between any two observations is larger than `MAD*OUTLIER_THRESHOLD`
+This calculates the median duration between one observation and the median observation epoch. The median is not affected by outliers, therefore it can be used to identify jumps in the epochs. If the time difference between any two observations is larger than `MAD*OUTLIER_THRESHOLD`, the source detections are split into subgroups. If more than one of the jumps is found, the detections are split into several subgroups.
+As long as the number of detections in each subgroup is larger or equal to the lower limit defined by the `DETECTIONS`, the detections within the subgroup are then checked for linear motion by the fitting procedure described above. If any subgroup fails the linear motion test, the source is discarded. If a subgroup has too few detections, it is only discarded if the other subgroup fails the linear motion test or if all other subgroups do not contain the sufficient amount of observations either.
+
+All remaining source detections with jumps in epoch get +1 added to their `FLAG_SSO` parameter, to signal that the source contains outliers.
+
+
 
 Filter by Trail Size
 --------------------
