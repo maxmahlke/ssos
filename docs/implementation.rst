@@ -5,7 +5,7 @@ Usage & Code Implementation
 Input Files
 ===========
 
-The ``pipeline_settings.sso`` file looks like this:
+The default ``pipeline_settings.sso`` file is given below. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home.
 
 ::
 
@@ -70,6 +70,8 @@ The ``pipeline_settings.sso`` file looks like this:
 
 Command-Line API
 ================
+
+Again, the command-line API is heavily inspired by the SExtractor and SCAMP ones.
 
 -a            command-line option "a"
 -b file       options can have arguments

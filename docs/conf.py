@@ -46,6 +46,7 @@ extensions = [
     'sphinx.ext.todo',
 ]
 
+# Print out todos in documentation?
 todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
