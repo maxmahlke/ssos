@@ -4,7 +4,7 @@
 SSO Pipeline
 ############
 
-Recover astromery and photometry of Solar System Objects (SSOs) in wide-field imaging surveys.
+Recover astrometry and photometry of Solar System Objects (SSOs) in wide-field imaging surveys.
 
 .. image:: imgs/sso_banner.png
     :align: center
@@ -14,7 +14,7 @@ Recover astromery and photometry of Solar System Objects (SSOs) in wide-field im
 
 Introduction to the SSO Pipeline
 ================================
-The SSO Pipeline is a flexible tool to identify and characterize Solar System Objects in consecutive exposures of the sky. Best use cases are wide-field imaging surveys such as the `Kilo-Degree Survery <http://kids.strw.leidenuniv.nl/>`_, for which the pipeline was `originally desinged <https://www.aanda.org/articles/aa/ref/2018/02/aa30924-17/aa30924-17.html>`_.
+The SSO Pipeline is a flexible tool to identify and characterize Solar System Objects in consecutive exposures of the sky. Best use cases are wide-field imaging surveys such as the `Kilo-Degree Survey <http://kids.strw.leidenuniv.nl/>`_, for which the pipeline was `originally designed <https://www.aanda.org/articles/aa/ref/2018/02/aa30924-17/aa30924-17.html>`_.
 
 The pipeline is written in ``python 3``. The three main steps are
 
