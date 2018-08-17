@@ -14,7 +14,7 @@ SCAMP
 Filter Chain
 ============
 
-All filter steps are optional and can be controlled via the `pipeline setup file`.
+All filter steps are optional and can be adjusted via the `pipeline setup file`.
 
 Filter by Number of Detections
 ------------------------------
