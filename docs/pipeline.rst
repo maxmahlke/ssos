@@ -51,16 +51,26 @@ As long as the number of detections in each subgroup is larger or equal to the l
 
 All remaining source detections with jumps in epoch get +1 added to their `FLAG_SSO` parameter, to signal that the source contains outliers.
 
+.. todo::
 
+    Add figures of fits, outliers, subgroup fits
 
-Filter by Trail Size
---------------------
 
 Filter by Trail Consistency
 ---------------------------
 
+By default, this filter is disabled.
+
+
+Filter by Trail Size Distribution
+---------------------------------
+
+By default, this filter is disabled.
+
+
 Filter by Star Region
 ---------------------
+Bright stars tend to introduce numerous artifacts like refraction spikes and reflection ghosts into images. As the position of these artifacts depends on the camera geometry and pointing, they tend to follow the dithering pattern and display linear movement over all observation epochs. Sources close to bright stars therefore tend to contain a large fraction of these artifacts, and can be rejected with this filter. The `DISTANCE` parameter sets the radius around bright stars in arcsecond where all sources are cleared from. The `HYG database <http://www.astronexus.com/hyg>`_ is used to define the RA / DEC coordinate pairs of bright stars.
 
 Optional Analyses
 =================
