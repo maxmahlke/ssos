@@ -2,6 +2,8 @@
 The Pipeline
 ############
 
+
+.. _SExtractor:
 SExtractor
 ==========
 

@@ -44,6 +44,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.todo',
+    'sphinxcontrib.inlinesyntaxhighlight',
+    'sphinx.ext.autosectionlabel'
 ]
 
 # Print out todos in documentation?
