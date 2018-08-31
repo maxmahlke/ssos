@@ -24,7 +24,7 @@ The pipeline is written in ``python 3``. The three main steps are
 
 Additional analyses can be done, e.g. cross-matching SSO candidates with the `SkyBoT <http://vo.imcce.fr/webservices/skybot/>`_ database or creating cutouts with `SWarp <https://www.astromatic.net/software/swarp>`_.
 
-The strength of the pipeline lies in the large degree of flexibility. All steps can be adapted to the images at hand using set-up files. The install process and survey-specific set-ups are described in the `Getting Started <setup.html>`_.
+The strength of the pipeline lies in the large degree of flexibility. All steps can be adapted to the images at hand using configuration files. The install process and survey-specific set-ups are described in the `Getting Started <setup.html>`_.
 
 ----------------
 
@@ -35,3 +35,8 @@ The strength of the pipeline lies in the large degree of flexibility. All steps 
    pipeline
    implementation
    misc
+
+Acknowledgements
+================
+
+.. Supervisors, sextractor, scamp, swarp, hygcat, astrowise, skybot, astropy, pandas,

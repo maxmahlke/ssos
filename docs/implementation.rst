@@ -1,34 +1,17 @@
 ###########################
-Usage & Code Implementation
+Code Implementation
 ###########################
 
-Input Files
-===========
-
-
-.. _clapi:
-Command-Line API
-================
-
-Again, the command-line API is heavily inspired by the SExtractor and SCAMP ones.
-
--a            command-line option "a"
--b file       options can have arguments
-              and long descriptions
---long        options can be long also
---input=file  long options can also have
-              arguments
-/V            DOS/VMS-style options too
 
 SExtractor and SCAMP wrapper
 ============================
 
 
-Filter Chain
-============
+Filter
+======
 
-Output Files
-============
+Target Directory
+================
 
 ::
 
