@@ -5,7 +5,8 @@ SEX_CONFIG           semp/ssos.sex           # Path to SExtractor config file
 SEX_PARAMS           semp/ssos.param         # Path to SExtractor param list
 SEX_FILTER           semp/gauss_2.5_5x5.conv # Path to SExtractor filter file
 SEX_NNW              semp/default.nnw        # Path to SExtractor neural network file
-SCI_EXTENSION        1                           # Science Extension of FITS file
+SCI_EXTENSION        1                       # Science Extension of FITS file
+WEIGHT_IMAGES        False                   # Path to weight images for SExtractor run
 
 # ------
 # SCAMP File Settings

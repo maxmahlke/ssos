@@ -132,7 +132,7 @@ AHEADER_SUFFIX         .ahead          # Filename extension for additional
 HEADER_SUFFIX          .head           # Filename extension for OUTPUT headers
 HEADER_TYPE            NORMAL          # NORMAL or FOCAL_PLANE
 VERBOSE_TYPE           NORMAL          # QUIET, NORMAL, LOG or FULL
-WRITE_XML              Y               # Write XML file (Y/N)?
+WRITE_XML              N               # Write XML file (Y/N)?
 XML_NAME               scamp.xml       # Filename for XML output
 XSL_URL                file:///usr/local/Cellar/scamp/2.0.4_1/share/scamp/scamp.xsl
                                        # Filename for XSL style-sheet

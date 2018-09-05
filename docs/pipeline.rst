@@ -36,7 +36,8 @@ If you are unsure which extension contains your image, you can trial run SExtrac
 
 
 The SEXtractor output catalogues will be called ``image_file[SCI_EXTENSION].cat`` [#]_.
-
+After the SExtractor run, the input images are checked for the `MJD-OBS` header keyword.
+If it does not exist, the `DATE-OBS keyword` is read in, converted to MJD, and saved in an ``.ahead`` file with the same filename structure as the SExtractor catalog. This additional header file is important for the subsequent SCAMP run.
 
 .. _scamp_section:
 
@@ -132,7 +133,7 @@ Setting: `FILTER_STAR_REGIONS`  |  Parameters: `DISTANCE`, `HYGCAT`
 
 Bright stars tend to introduce numerous artifacts like refraction spikes and reflection ghosts into images. As the position of these artifacts depends on the camera geometry and pointing, they tend to follow the dithering pattern and display linear movement over all observation epochs. Sources close to bright stars therefore tend to contain a large fraction of these artifacts, and can be rejected with this filter. The `DISTANCE` parameter sets the radius around bright stars in arcsecond where all sources are cleared from. The `HYG database <http://www.astronexus.com/hyg>`_ is used to define the RA / DEC coordinate pairs of bright stars and is located in ``semp/hygdata_v3.csv``.
 
-.. _swarp_section:
+.. _optional:
 
 Optional Analyses
 =================

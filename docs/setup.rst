@@ -20,6 +20,12 @@ The pipeline requires the following additional `python` packages: `astropy`, `nu
 
     $ pip install -r requirements.txt
 
+or by using the setup script:
+
+.. code-block:: bash
+
+    $ [sudo] python setup.py install
+
 Make sure that the astrOmatic binaries :bash:`sex`, :bash:`scamp`, and :bash:`swarp` are in your :bash:`PATH` shell variable. Try it with e.g.
 
 .. code-block:: bash
@@ -37,98 +43,126 @@ Make sure that the astrOmatic binaries :bash:`sex`, :bash:`scamp`, and :bash:`sw
 Pipeline Setting Files
 ======================
 
-The default ``pipeline_settings.ssos`` file is can be `found here <https://github.com/maxmahlke/SSO_Pipeline/blob/master/sso_pipeline/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipelins.rst>`_ and `Implementation <implementation.rst>`_ pages.
+The default ``pipeline_settings.ssos`` file can be `found here <https://github.com/maxmahlke/SSO_Pipeline/blob/master/sso_pipeline/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
 
 .. _Guide to SExtractor: http://astroa.physics.metu.edu.tr/MANUALS/sextractor/Guide2source_extractor.pdf
 
+.. _IAU Observatory Code: http://vo.imcce.fr/webservices/data/displayIAUObsCodes.php
 
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| Parameter             | Values  | Examples                |Description                                                                |
-+=======================+=========+=========================+===========================================================================+
-| `SEX_CONFIG`          | string  | semp/sso.sex            | SExtractor configuration file for source detection in the survey images.  |
-|                       |         |                         | For details, see :ref:`sextractor_section`.                               |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `SEX_PARAMS`          | string  | semp/sso.param          | SExtractor output parameter for source detection in the survey images.    |
-|                       |         |                         | For details, see :ref:`sextractor_section`.                               |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `SEX_FILTER`          | string  |semp/gauss_2.5_5x5 .conv | SExtractor convolution filter file for source detection in the survey     |
-|                       |         |                         | images. For details, see :ref:`sextractor_section` and the                |
-|                       |         |                         | `Guide to SExtractor`_.                                                   |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `SEX_NNW`             | string  | semp/sso.nnw            | SExtractor neural network for galaxy-star differentiation. For details,   |
-|                       |         |                         | see :ref:`sextractor_section` and the `Guide to SExtractor`_.             |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `SCI_EXTENSION`       | integer | 1 |  2 | 1,2            | Index of science extension of FITS images. For details, see               |
-|                       |         |                         | :ref:`sextractor_section`.                                                |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `SCAMP_CONFIG`        | string  | semp/sso.scamp          | SCAMP configuration file to link source detections at different epochs,   |
-|                       |         |                         | see :ref:`scamp_section`.                                                 |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `SWARP_CONFIG`        | string  | semp/sso.swarp          | SWARP configuration file for creation of cutout images of SSO candidates, |
-|                       |         |                         | see :ref:`swarp_section`.                                                 |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FILTER_DETEC`        | bool    | True | False            | See  :ref:`filter_section`                                                |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `DETECTIONS`          | integer |  1,2 |  1,2,3,4 | 1,5   |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FILTER_PM`           | bool    |   True | False          |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `PM_LOW`              | float   |     0.                  |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `PM_UP`               | float   |     200.                |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `PM_SNR`              | float   |      20.                |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FILTER_PIXEL`        | bool    |   True | False          |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `DELTA_PIXEL`         | float   |      2.                 |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FILTER_MOTION`       | bool    |    True | False         |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `IDENTIFY_OUTLIER`    | bool    |    True | False         |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `OUTLIER_THRESHOLD`   | float   |     2.                  |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `R_SQU_M`             | float   |     0.95                |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FILTER_TRAIL`        | bool    |      True | False       |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `RATIO`               | float   |      0.25               |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FILTER_T_DIST`       | bool    |     True | False        |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `SIGMA`               | float   |         2.              |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FILTER_STAR_REGIONS` | bool    |      True | False       |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `DISTANCE`            | float   |        300.             |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `HYGCAT`              | string  | semp/hygdata_v3.csv     |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `CROSSMATCH_SKYBOT`   | bool    |     True | False        |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `CROSSMATCH_RADIUS`   | float   |        10.              |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `OBSERVATORY_CODE`    | string  |        500              |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FOV_DIMENSIONS`      | string  |       1x1.5             |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `EXTRACT_CUTOUTS`     | bool    |     True | False        |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `CUTOUT_SIZE`         | integer |        256              |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `FIXED_APER_MAGS`     | bool    |    True | False         |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-| `REFERENCE_FILTER`    | string  |         gSDSS           |                                                                           |
-+-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+.. _SkyBoT: http://vo.imcce.fr/webservices/skybot/?conesearch
+
+
+.. table::
+    :align: center
+
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | Parameter             | Values  | Examples                |Description                                                                |
+    +=======================+=========+=========================+===========================================================================+
+    | `SEX_CONFIG`          | string  | semp/sso.sex            | SExtractor configuration file for source detection in the survey images.  |
+    |                       |         |                         | For details, see :ref:`sextractor_section`.                               |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `SEX_PARAMS`          | string  | semp/sso.param          | SExtractor output parameter for source detection in the survey images.    |
+    |                       |         |                         | For details, see :ref:`sextractor_section`.                               |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `SEX_FILTER`          | string  |semp/gauss_2.5_5x5 .conv | SExtractor convolution filter file for source detection in the survey     |
+    |                       |         |                         | images. For details, see :ref:`sextractor_section` and the                |
+    |                       |         |                         | `Guide to SExtractor`_.                                                   |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `SEX_NNW`             | string  | semp/sso.nnw            | SExtractor neural network for galaxy-star differentiation. For details,   |
+    |                       |         |                         | see :ref:`sextractor_section` and the `Guide to SExtractor`_.             |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `SCI_EXTENSION`       | integer | 1 |  2 | 1,2            | Index of science extension of FITS images. For details, see               |
+    |                       |         |                         | :ref:`sextractor_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `WEIGHT_IMAGES`       | bool    | False | /tmp/weights    | Absolute path to weight images for SExtractor run. If False, SExtractor   |
+    |                       |         |                         | runs with settings according to ``ssos.sex`` file.                        |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `SCAMP_CONFIG`        | string  | semp/sso.scamp          | SCAMP configuration file to link source detections at different epochs,   |
+    |                       |         |                         | see :ref:`scamp_section`.                                                 |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `SWARP_CONFIG`        | string  | semp/sso.swarp          | SWARP configuration file for creation of cutout images of SSO candidates, |
+    |                       |         |                         | see :ref:`optional`.                                                      |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER_DETEC`        | bool    | True | False            | Turn filter based on number of detections on or off.                      |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `DETECTIONS`          | integer |  1,2 |  1,2,3,4 | 1,5   | Sources with this number of detections are rejected.                      |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER_PM`           | bool    |   True | False          | Turn filter based on proper motion values on or off.                      |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `PM_LOW`              | float   |     0.                  | Lower limit on proper motion of sources. See :ref:`filter_section`.       |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `PM_UP`               | float   |     200.                | Upper limit on proper motion of sources. See :ref:`filter_section`.       |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `PM_SNR`              | float   |      20.                | Lower limit on signal-to-noise ratio of proper motion of sources.         |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER_PIXEL`        | bool    |   True | False          | Turn filter based on pixel positions on or off. See :ref:`filter_section`.|
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `DELTA_PIXEL`         | float   |      2.                 | Minimum number of pixel the centre position of the source has to shift by |
+    |                       |         |                         | over all exposures in X and Y. See :ref:`filter_section`.                 |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER_MOTION`       | bool    |    True | False         | Turn filter based on linearity of motion on or off.                       |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `IDENTIFY_OUTLIER`    | bool    |    True | False         | Identify outliers in epoch-space and treat their motion separately.       |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `OUTLIER_THRESHOLD`   | float   |     2.                  | Threshold in Median Absolute Deviations for identification of outlier.    |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `R_SQU_M`             | float   |     0.95                | Lower limit of R-Squared goodness-of-fit parameter for linear motion fit. |
+    |                       |         |                         | Must be between 0 and 1. See :ref:`filter_section`.                       |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER_TRAIL`        | bool    |      True | False       | Turn filter based on constant trail parameters on or off.                 |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `RATIO`               | float   |      0.25               | Lower limit on the ratio of the error on the weighted mean to the standard|
+    |                       |         |                         | deviation of the source ellipse parameters. See :ref:`filter_section`     |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER_T_DIST`       | bool    |     True | False        | Turn filter based on distribution of trail sizes in image on or off.      |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `SIGMA`               | float   |         2.              | Upper limit in standard deviation to find outlier in source ellipse       |
+    |                       |         |                         | parameters. See :ref:`filter_section`.                                    |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER_STAR_REGIONS` | bool    |      True | False       | Turn filter based on source distance to bright stars on or off.           |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `DISTANCE`            | float   |        300.             | Minimum distance of source to bright star in star catalogue in arcsecond. |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `HYGCAT`              | string  | semp/hygdata_v3.csv     | Absolute path to `HYG <http://www.astronexus.com/hyg>`_ star catalogue.   |
+    |                       |         |                         | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `CROSSMATCH_SKYBOT`   | bool    |     True | False        | Turn cross-matching with SkyBoT database on or off. See :ref:`optional`.  |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `CROSSMATCH_RADIUS`   | float   |        10.              | Upper limit of distance between source candidate and SkyBoT source to     |
+    |                       |         |                         | be considered a match, in arcsecond. See :ref:`optional`.                 |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `OBSERVATORY_CODE`    | string  |        500              | `IAU Observatory Code`_                                                   |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FOV_DIMENSIONS`      | string  |       1x1.5             | Dimensions of exposure field-of-view in degrees, see `SkyBoT`_.           |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `EXTRACT_CUTOUTS`     | bool    |     True | False        | Turn cutout extraction with SWARP on or off. See :ref:`optional`.         |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `CUTOUT_SIZE`         | integer |        256              | Size of cutouts in pixel, each dimension, see :ref:`optional`.            |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FIXED_APER_MAGS`     | bool    |    True | False         | Compute fixed aperture magnitudes for colours. See :ref:`optional`.       |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `REFERENCE_FILTER`    | string  |         gSDSS           | Filter to use as reference in SExtractor dual-image mode runs. Value has  |
+    |                       |         |                         | to correspond to `FILTER` keyword in FITS header. See :ref:`optional`.    |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
 
 The configuration file can be formatted with tabs and spaces. Comments are marked with `#`. Lines beginning with # or newline characters are ignored.
 
-.. note:: The pipeline script first checks if the `-c` flag is pointing to a configuration file. If not, a file called `pipeline_settings.ssos` is looked for in the current working directory. If no file is found, the hard-coded default values are used. Any parameter can be overwritten temporarily by using the appropriate flag, see :ref:`Command-Line API <Command-Line API>`.
+.. note:: The pipeline script first checks if the `-c` flag is pointing to a configuration file. If not, it looks for a file called `pipeline_settings.ssos` in the current working directory. If no file is found, the hard-coded default values are used. Any parameter can be overwritten temporarily by using the appropriate flag, see :ref:`Command-Line API <Command-Line API>`.
 
 
 Survey-specific changes
@@ -138,64 +172,62 @@ It is highly unlikely that the pipeline will give you the optimum result (clean 
 
 
 
-``sso.sex``
+``ssos.sex``
 
-* SATUR_KEY
+    - `SATUR_KEY`
 
-* GAIN_KEY
+    - `GAIN_KEY`
 
-* SEEING_FWHM
+    - `SEEING_FWHM`
 
-* MAG_ZEROPOINT
-
-
-``semp/sso.scamp``
-
-* ASTRINSTRU_KEY
-
-* ASTRACCURACY_KEY
-
-* PHOTINSTRU_KEY
-
-* MAGZERO_KEY
-
-* EXPOTIME_KEY
-
-* AIRMASS_KEY
-
-* EXTINCT_KEY
-
-* PHOTOMFLAG_KEY
+    - `MAG_ZEROPOINT`
 
 
-``semp/sso.swarp``
+``semp/ssos.scamp``
 
-* GAIN_KEYWORD
+    - `ASTRINSTRU_KEY`
+
+    - `ASTRACCURACY_KEY`
+
+    - `PHOTINSTRU_KEY`
+
+    - `MAGZERO_KEY`
+
+    - `EXPOTIME_KEY`
+
+    - `AIRMASS_KEY`
+
+    - `EXTINCT_KEY`
+
+    - `PHOTOMFLAG_KEY`
+
+
+``semp/ssos.swarp``
+
+    - `GAIN_KEYWORD`
 
 
 
 ``pipeline_settings.ssos``
 
-* SEX_CONFIG
+    - `SEX_CONFIG`
 
-* SEX_PARAMS
+    - `SEX_PARAMS`
 
-* SEX_FILTER
+    - `SEX_FILTER`
 
-* SEX_NNW
+    - `SEX_NNW`
 
-* SCAMP_CONFIG
+    - `SCAMP_CONFIG`
 
-* SWARP_CONFIG
+    - `SWARP_CONFIG`
 
-* HYGCAT
+    - `HYGCAT`
 
-* OBSERVATORY CODE
+    - `OBSERVATORY CODE`
 
-* FOV SIZE
+    - `FOV SIZE`
 
-
-Furthermore, the implementation of weight images for the SExtractor runs can be beneficial.
 
 After these initial changes, you should experiment with the different SExtractor, SCAMP, and pipeline settings, adjusting e.g. the filter chain parameters. A good way to fine-tune is to pick a test field with several SSOs and run the pipeline with different configurations. The cutout images will tell you what types of artifacts are remaining and whether you accidentally filtered out SSOs by restricting the candidate filters too much.
 
@@ -209,12 +241,14 @@ Input files are the survey images, passed to the pipeline in one directory:
 
     $ ssos path/to/images
 
-The images **must** have a ``.fits`` file ending to be recongized by the script.
+The images **must** have a ``.fits`` file ending to be recognized by the script.
+
+If weight images shall be passed to the SExtractor runs, specify the directory containing the weight images using the `WEIGHT_IMAGES` parameter in the ``pipeline_settings.ssos``. The weight images need to have the same filename as the exposures they shall be applied on, but with a ``.weight`` extension replacing the ``.fits``. [#]_
 
 Output Files
 ============
 
-The script creates several directories in the target directory (CWD by default). The cats directory contains the SExtractor and SCAMP catalogues and the final output ssos.csv. For every SExtractor catalog, there is also one .ahead file with the same filename. This file contains the observation date as MJD-OBS keyword, which is required for the subsequent run of SCAMP. SCAMP looks for extensions of catalog headers in .ahead files.
+The script creates several directories in the target directory (CWD by default). The cats directory contains the SExtractor and SCAMP catalogues and the final output ssos.csv. For every SExtractor catalogue, there is also one .ahead file with the same filename. This file contains the observation date as MJD-OBS keyword, which is required for the subsequent run of SCAMP. SCAMP looks for extensions of catalogue headers in .ahead files.
 
 The cutouts directory contains the cutouts made by SWarp of the SSO detections. In the logs directory, you can find the log file of the pipeline, following the naming scheme sso_$CURRENTDATETIME.log. The skybot directory stores the SkyBoT query results.
 
@@ -271,14 +305,15 @@ To judge the results of the pipeline, first go into the logfile. It looks like t
     All done!    |    2 SSOs found in 15326 Sources    |    The analysis ran in 364 seconds
 
     Output File: /tmp/cats/ssos.csv
+    Log File: /tmp/logs/ssos_20180720103204.log
 
-In case an SSO was detected, you should look at the cats/ssos.csv file and the cutouts to verify the detection. In cats/ssos.csv, you can also find basic SkyBoT parameters, if the object was successfully matched. For more detailed information on the possible match, look into the SkyBoT queries in skybot.
+In case an SSO was detected, you should look at the ``cats/ssos.csv`` file and the cutouts to verify the detection. In ``cats/ssos.csv``, you can also find basic SkyBoT parameters, if the object was successfully matched. For more detailed information on the possible match, look into the SkyBoT queries in ``skybot/``.
 
 The final database contains the following columns
 
 .. code-block:: bash
 
-    SOURCE_NUMBER - SCAMP groups single detections into one source by giving them the same SOURCE_NUMBER
+    SOURCE_NUMBER - SCAMP groups detections into sources by giving them the same SOURCE_NUMBER
     CATALOG_NUMBER - Number of SExtractor catalog containing this source detections
     RA - Right Asecension of source in degree
     DEC - Declincation of source in degree
@@ -296,8 +331,8 @@ The final database contains the following columns
     EXPTIME_EXP - Exposure time
     OBJECT_EXP - Object ID of J_VAR field
     FILTER_EXP - Name of filter that the field was imaged in
-    RA_EXP - Center right ascension coordinate of expsoure
-    DEC_EXP - Center declination coordinate of expsoure
+    RA_EXP - Center right ascension coordinate of exposure
+    DEC_EXP - Center declination coordinate of exposure
     FILENAME_EXP - Filename of input image that the SSO was detected in
     SKYBOT_NAME - If matched, name of matching SSO
     SKYBOT_CLASS - Class of SkyBoT match
@@ -333,7 +368,7 @@ More information on these parameters can be found in the `SExtractor <https://re
 Command-Line API
 ================
 
-Again, the command-line API is heavily inspired by the SExtractor and SCAMP softwares. The following help is printed when the pipeline is called without arguments at all or with the ``-h`` or ``--help`` flag set:
+Again, the command-line API is heavily inspired by the SExtractor and SCAMP softwares. The following help is printed when the pipeline is called without arguments or with the ``-h`` or ``--help`` flag set:
 
 .. code-block:: bash
 
@@ -367,12 +402,13 @@ Again, the command-line API is heavily inspired by the SExtractor and SCAMP soft
       -t TARGET, --target TARGET
                             Target directory to save fits files. If no target
                             given, writing to CWD
-      -l LOG, --log LOG     Set the logging level. Validarguments are DEBUG, INFO,
+      -l LOG, --log LOG     Set the logging level. Valid arguments are DEBUG, INFO,
                             WARNING, ERROR, CRITICAl.
-      -v, --verbose         Print logging to console
+      -q, --quiet           Suppress logging to console
       --sex                 Force SExtractor runs
       --scamp               Force SCAMP runs
       --swarp               Force SWARP runs
+      --skybot              Force SkyBoT query
 
     Filter Settings:
       -FILTER_DETEC bool    Override FILTER_DETEC setting. Must be True or False.
@@ -425,5 +461,4 @@ Again, the command-line API is heavily inspired by the SExtractor and SCAMP soft
       -FOV_DIMENSIONS value
                             Override FOV_DIMENSIONS setting.
 
-
-The verbose flag ``-v`` is recommended at first to understand what the script does. It prints the logging output to console (as well as to the logfile).
+.. [#] Do not forget to change the `WEIGHT_TYPE` parameter in ``ssos.sex`` to activate the weight images, only supplying the path to the directory is not enough.
