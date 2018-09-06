@@ -102,7 +102,7 @@ To tackle this problem, the `IDENTIFY_OUTLIER` option was introduced. If `True`,
 This calculates the median duration between one observation and the median observation epoch. The median is not affected by outliers, therefore it can be used to identify jumps in the epochs. If the time difference between any two observations is larger than `MAD*OUTLIER_THRESHOLD`, the source detections are split into subgroups. If more than one of the jumps is found, the detections are split into several subgroups.
 As long as the number of detections in each subgroup is larger or equal to the lower limit defined by the `DETECTIONS`, the detections within the subgroup are then checked for linear motion by the fitting procedure described above. If any subgroup fails the linear motion test, the source is discarded. If a subgroup has too few detections, it is only discarded if the other subgroup fails the linear motion test or if all other subgroups do not contain the sufficient amount of observations either.
 
-All sources containing outliers in epoch space get +1 added to their `FLAGS_SSOS` parameter, to signal that the source contains outliers.
+All source detections which were identified as outliers in epoch space get +1 added to their `FLAGS_SSOS` parameter. If a source contains "only outliers" (e.g. two pairs of two detections with a large gap in between), the source is removed.
 
 .. todo::
 
@@ -117,7 +117,7 @@ Assuming roughly constant exposure time and seeing conditions, the SSO trail in 
 
 .. math::
 
-    \mathrm{\texttt{RATIO}} = \frac{\overline{\sigma_{w}} }{ \sigma_{x}}, \qquad x~\epsilon~\{\texttt{AWIN$_$IMAGE}, \texttt{BWIN$_$IMAGE}\}
+    \mathrm{\texttt{RATIO}} = \frac{\overline{\sigma_{w}} }{ \sigma_{x}}, \qquad x~\epsilon~\{\verb|AWIN$_$IMAGE|, \verb|BWIN$_$IMAGE|\}
 
 .. math::
 
@@ -125,7 +125,7 @@ Assuming roughly constant exposure time and seeing conditions, the SSO trail in 
 
 .. math::
 
-    w_{x} = \frac{1}{\sqrt{var_{x}}} \qquad var~\epsilon~\{\texttt{ERRAWIN$_$IMAGE}, \texttt{ERRBWIN$_$IMAGE}\}
+    w_{x} = \frac{1}{\sqrt{var_{x}}} \qquad var~\epsilon~\{\verb|ERRAWIN$_$IMAGE|, \verb|ERRBWIN$_$IMAGE|\}
 
 and removes sources which show standard deviations larger than the `RATIO` parameter allows for.
 
