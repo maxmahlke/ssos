@@ -117,7 +117,7 @@ Assuming roughly constant exposure time and seeing conditions, the SSO trail in 
 
 .. math::
 
-    \mathrm{\texttt{RATIO}} = \frac{\overline{\sigma_{w}} }{ \sigma_{x}}, \qquad x~\epsilon~\{$\texttt{AWIN_IMAGE}$, $\texttt{BWIN_IMAGE}$\}
+    \mathrm{\texttt{RATIO}} = \frac{\overline{\sigma_{w}} }{ \sigma_{x}}, \qquad x~\epsilon~\{\texttt{AWIN$_$IMAGE}$, \texttt{BWIN$_$IMAGE}$\}
 
 .. math::
 
@@ -125,7 +125,7 @@ Assuming roughly constant exposure time and seeing conditions, the SSO trail in 
 
 .. math::
 
-    w_{x} = \frac{1}{\sqrt{var_{x}}} \qquad var~\epsilon~\{$\texttt{ERRAWIN_IMAGE}$, $\texttt{ERRBWIN_IMAGE}$\}
+    w_{x} = \frac{1}{\sqrt{var_{x}}} \qquad var~\epsilon~\{\texttt{ERRAWIN$_$IMAGE}, \texttt{ERRBWIN$_$IMAGE}$\}
 
 and removes sources which show standard deviations larger than the `RATIO` parameter allows for.
 
