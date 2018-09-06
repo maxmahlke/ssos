@@ -117,15 +117,15 @@ Assuming roughly constant exposure time and seeing conditions, the SSO trail in 
 
 .. math::
 
-    \mathrm{\texttt{RATIO}} = \frac{\overline{\sigma_{w}} }{ \sigma_{x}}, \qquad x~\epsilon~\{\texttt{AWIN_IMAGE}, \texttt{BWIN_IMAGE}\}
+    $\mathrm{\texttt{RATIO}} = \frac{\overline{\sigma_{w}} }{ \sigma_{x}}, \qquad x~\epsilon~\{\texttt{AWIN_IMAGE}, \texttt{BWIN_IMAGE}\}$
 
 .. math::
 
-    \overline{\sigma_{w}} = \Big( \sqrt{\sum_i w_{i,x}} \Big)^{-1}
+    $\overline{\sigma_{w}} = \Big( \sqrt{\sum_i w_{i,x}} \Big)^{-1}$
 
 .. math::
 
-    w_{x} = \frac{1}{\sqrt{var_{x}}} \qquad var~\epsilon~\{\texttt{AWINERR_IMAGE}, \texttt{BWINERR_IMAGE}\}
+    $w_{x} = \frac{1}{\sqrt{var_{x}}} \qquad var~\epsilon~\{\texttt{AWINERR_IMAGE}, \texttt{BWINERR_IMAGE}\}$
 
 and removes sources which show standard deviations larger than the `RATIO` parameter allows for.
 
@@ -161,7 +161,7 @@ SkyBoT Cross-match
 ------------------
 Setting: `CROSSMATCH_SKYBOT`  |  Parameters: `CROSSMATCH_RADIUS`, `OBSERVATORY_CODE`, `FOV_DIMENSIONS`
 
-Query the `SkyBoT <http://vo.imcce.fr/webservices/skybot/?conesearch>`_ database for SSOs in the field-of-view defined by `FOV_DIMENSIONS` and the center coordinates of each exposure for each observation epoch. The query result is saved as ``skybot/query_string.XML`` file. The positions of all SSO candidates are then compared to the predicted positions of known SSOs, and if a match is found within the `CROSSMATCH_RADIUS` (in arcsecond), the predicted SkyBoT parameters are added to the source metadata in the database.
+Query the `SkyBoT <http://vo.imcce.fr/webservices/skybot/?conesearch>`_ database for SSOs in the field-of-view defined by `FOV_DIMENSIONS` and the centre coordinates of each exposure for each observation epoch. The query result is saved as ``skybot/query_string.XML`` file. The positions of all SSO candidates are then compared to the predicted positions of known SSOs, and if a match is found within the `CROSSMATCH_RADIUS` (in arcsecond), the predicted SkyBoT parameters are added to the source metadata in the database.
 
 The `FOV_DIMENSIONS` parameter has to be defined as described on the SkyBoT webpage, a string of format "YxZ", where Y and Z are the image dimensions (integer or floating value) in degree.
 
