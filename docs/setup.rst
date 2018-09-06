@@ -404,76 +404,76 @@ Again, the command-line API is heavily inspired by the SExtractor and SCAMP soft
             [-FOV_DIMENSIONS value]
             fields [fields ...]
 
-Pipeline to search for Solar System objects in wide-field imaging surveys
+    Pipeline to search for Solar System objects in wide-field imaging surveys
 
-positional arguments:
-  fields                Path to directory of field to be searched
+    positional arguments:
+      fields                Path to directory of field to be searched
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -c SET_UP, --config SET_UP
-                        Path to configuration file
-  -t TARGET, --target TARGET
-                        Target directory to save fits files. If no target
-                        given, writing to CWD
-  -l LOG, --log LOG     Set the logging level. Valid arguments are DEBUG,
-                        INFO, WARNING, ERROR, CRITICAl.
-  -q, --quiet           Suppress logging to console
-  --sex                 Force SExtractor runs
-  --scamp               Force SCAMP runs
-  --swarp               Force SWARP runs
-  --skybot              Force SkyBoT query
+    optional arguments:
+      -h, --help            show this help message and exit
+      -c SET_UP, --config SET_UP
+                            Path to configuration file
+      -t TARGET, --target TARGET
+                            Target directory to save fits files. If no target
+                            given, writing to CWD
+      -l LOG, --log LOG     Set the logging level. Valid arguments are DEBUG,
+                            INFO, WARNING, ERROR, CRITICAl.
+      -q, --quiet           Suppress logging to console
+      --sex                 Force SExtractor runs
+      --scamp               Force SCAMP runs
+      --swarp               Force SWARP runs
+      --skybot              Force SkyBoT query
 
-Filter Settings:
-  -FILTER_DETEC bool    Override FILTER_DETEC setting. Must be True or False.
-  -FILTER_PM bool       Override FILTER_PM setting. Must be True or False.
-  -FILTER_PIXEL bool    Override FILTER_PIXEL setting. Must be True or False.
-  -FILTER_MOTION bool   Override FILTER_MOTION setting. Must be True or False.
-  -IDENTIFY_OUTLIERS bool
-                        Override IDENTIFY_OUTLIERS setting. Must be True or
-                        False.
-  -FILTER_TRAIL bool    Override FILTER_TRAIL setting. Must be True or False.
-  -FILTER_T_DIST bool   Override FILTER_T_DIST setting. Must be True or False.
-  -FILTER_STAR_REGIONS bool
-                        Override FILTER_STAR_REGIONS setting. Must be True or
-                        False.
-  -CROSSMATCH_SKYBOT bool
-                        Override CROSSMATCH_SKYBOT setting. Must be True or
-                        False.
-  -EXTRACT_CUTOUTS bool
-                        Override EXTRACT_CUTOUTS setting. Must be True or
-                        False.
-  -FIXED_APER_MAGS bool
-                        Override FIXED_APER_MAGS setting. Must be True or
-                        False.
-  -SEX_CONFIG value     Override SEX_CONFIG setting.
-  -SEX_PARAMS value     Override SEX_PARAMS setting.
-  -SEX_FILTER value     Override SEX_FILTER setting.
-  -SEX_NNW value        Override SEX_NNW setting.
-  -SCAMP_CONFIG value   Override SCAMP_CONFIG setting.
-  -SWARP_CONFIG value   Override SWARP_CONFIG setting.
-  -SCI_EXTENSION value  Override SCI_EXTENSION setting.
-  -WEIGHT_IMAGESDETECTIONS value
-                        Override WEIGHT_IMAGESDETECTIONS setting.
-  -PM_LOW value         Override PM_LOW setting.
-  -PM_UP value          Override PM_UP setting.
-  -PM_SNR value         Override PM_SNR setting.
-  -DELTA_PIXEL value    Override DELTA_PIXEL setting.
-  -OUTLIER_THRESHOLD value
-                        Override OUTLIER_THRESHOLD setting.
-  -R_SQU_M value        Override R_SQU_M setting.
-  -R_SQU_T value        Override R_SQU_T setting.
-  -SIGMA value          Override SIGMA setting.
-  -DISTANCE value       Override DISTANCE setting.
-  -HYGCAT value         Override HYGCAT setting.
-  -CROSSMATCH_RADIUS value
-                        Override CROSSMATCH_RADIUS setting.
-  -CUTOUT_SIZE value    Override CUTOUT_SIZE setting.
-  -REFERENCE_FILTER value
-                        Override REFERENCE_FILTER setting.
-  -OBSERVATORY_CODE value
-                        Override OBSERVATORY_CODE setting.
-  -FOV_DIMENSIONS value
-                        Override FOV_DIMENSIONS setting.
+    Filter Settings:
+      -FILTER_DETEC bool    Override FILTER_DETEC setting. Must be True or False.
+      -FILTER_PM bool       Override FILTER_PM setting. Must be True or False.
+      -FILTER_PIXEL bool    Override FILTER_PIXEL setting. Must be True or False.
+      -FILTER_MOTION bool   Override FILTER_MOTION setting. Must be True or False.
+      -IDENTIFY_OUTLIERS bool
+                            Override IDENTIFY_OUTLIERS setting. Must be True or
+                            False.
+      -FILTER_TRAIL bool    Override FILTER_TRAIL setting. Must be True or False.
+      -FILTER_T_DIST bool   Override FILTER_T_DIST setting. Must be True or False.
+      -FILTER_STAR_REGIONS bool
+                            Override FILTER_STAR_REGIONS setting. Must be True or
+                            False.
+      -CROSSMATCH_SKYBOT bool
+                            Override CROSSMATCH_SKYBOT setting. Must be True or
+                            False.
+      -EXTRACT_CUTOUTS bool
+                            Override EXTRACT_CUTOUTS setting. Must be True or
+                            False.
+      -FIXED_APER_MAGS bool
+                            Override FIXED_APER_MAGS setting. Must be True or
+                            False.
+      -SEX_CONFIG value     Override SEX_CONFIG setting.
+      -SEX_PARAMS value     Override SEX_PARAMS setting.
+      -SEX_FILTER value     Override SEX_FILTER setting.
+      -SEX_NNW value        Override SEX_NNW setting.
+      -SCAMP_CONFIG value   Override SCAMP_CONFIG setting.
+      -SWARP_CONFIG value   Override SWARP_CONFIG setting.
+      -SCI_EXTENSION value  Override SCI_EXTENSION setting.
+      -WEIGHT_IMAGESDETECTIONS value
+                            Override WEIGHT_IMAGESDETECTIONS setting.
+      -PM_LOW value         Override PM_LOW setting.
+      -PM_UP value          Override PM_UP setting.
+      -PM_SNR value         Override PM_SNR setting.
+      -DELTA_PIXEL value    Override DELTA_PIXEL setting.
+      -OUTLIER_THRESHOLD value
+                            Override OUTLIER_THRESHOLD setting.
+      -R_SQU_M value        Override R_SQU_M setting.
+      -R_SQU_T value        Override R_SQU_T setting.
+      -SIGMA value          Override SIGMA setting.
+      -DISTANCE value       Override DISTANCE setting.
+      -HYGCAT value         Override HYGCAT setting.
+      -CROSSMATCH_RADIUS value
+                            Override CROSSMATCH_RADIUS setting.
+      -CUTOUT_SIZE value    Override CUTOUT_SIZE setting.
+      -REFERENCE_FILTER value
+                            Override REFERENCE_FILTER setting.
+      -OBSERVATORY_CODE value
+                            Override OBSERVATORY_CODE setting.
+      -FOV_DIMENSIONS value
+                            Override FOV_DIMENSIONS setting.
 
 .. [#] Do not forget to change the `WEIGHT_TYPE` parameter in ``ssos.sex`` to activate the weight images, only supplying the path to the directory is not enough.
