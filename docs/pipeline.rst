@@ -35,7 +35,7 @@ If you are unsure which extension contains your image, you can trial run SExtrac
     Searching multiple extensions at the same time only makes sense if the field-of-views overlap. Otherwise, running the pipeline on the extensions separately will yield better results.
 
 
-The SEXtractor output catalogues will be called ``image_file[SCI_EXTENSION].cat`` [#]_.
+The SEXtractor output catalogues will be called ``image_file_SCI_EXTENSION.cat`` [#]_.
 After the SExtractor run, the input images are checked for the `MJD-OBS` header keyword.
 If it does not exist, the `DATE-OBS keyword` is read in, converted to MJD, and saved in an ``.ahead`` file with the same filename structure as the SExtractor catalog. This additional header file is important for the subsequent SCAMP run.
 
@@ -81,7 +81,7 @@ Filter by Bad Pixel
 -------------------
 Setting: `FILTER_PIXEL`  |  Parameters: `DELTA_PIXEL`
 
-If all detections of a single source fall within the same pixel `DELTA_PIXEL` range (both `X_IMAGE` and `Y_IMAGE` parameters), the source is rejected.
+If all detections of a single source fall within the same pixel `DELTA_PIXEL` range (both `XWIN_IMAGE` and `YWIN_IMAGE` parameters), the source is rejected.
 Bad CCD pixel can be falsely interpreted as sources by SExtractor and SCAMP. Due to the dithering patterns, they appear to move perfectly linear and with a constant proper motion. SExtractor parameters like `DETECT_MINAREA` can be used to clean these sources, but increasing the minimum pixel area per source can also reject faint SSOs. The filter chain therefore also offers this rudimentary bad pixel rejection.
 
 Filter by Motion
@@ -102,7 +102,7 @@ To tackle this problem, the `IDENTIFY_OUTLIER` option was introduced. If `True`,
 This calculates the median duration between one observation and the median observation epoch. The median is not affected by outliers, therefore it can be used to identify jumps in the epochs. If the time difference between any two observations is larger than `MAD*OUTLIER_THRESHOLD`, the source detections are split into subgroups. If more than one of the jumps is found, the detections are split into several subgroups.
 As long as the number of detections in each subgroup is larger or equal to the lower limit defined by the `DETECTIONS`, the detections within the subgroup are then checked for linear motion by the fitting procedure described above. If any subgroup fails the linear motion test, the source is discarded. If a subgroup has too few detections, it is only discarded if the other subgroup fails the linear motion test or if all other subgroups do not contain the sufficient amount of observations either.
 
-All remaining source detections with jumps in epoch get +1 added to their `FLAG_SSO` parameter, to signal that the source contains outliers.
+All sources containing outliers in epoch space get +1 added to their `FLAGS_SSOS` parameter, to signal that the source contains outliers.
 
 .. todo::
 
@@ -113,6 +113,23 @@ Filter by Trail Consistency
 ---------------------------
 Setting: `FILTER_TRAIL`  |  Parameters: `RATIO`
 
+Assuming roughly constant exposure time and seeing conditions, the SSO trail in the images should not vary in size. This is expressed by the `AWIN_IMAGE` and `BWIN_IMAGE` SExtractor parameters, which are the semi-major- and semi-minor axes of the ellipse fitted to the source. Varying size parameters indicate an association of random sources (e.g. cosmic ray + star). This filter compares the standard deviation of both `AWIN_IMAGE` and `BWIN_IMAGE` of all detections of one source against the weighted average uncertainty,
+
+.. math::
+
+    \mathrm{\texttt{RATIO}} = \frac{\overline{\sigma_{w}} }{ \sigma_{x}}, \qquad x~\epsilon~\{\texttt{AWIN_IMAGE}, \texttt{BWIN_IMAGE}\}
+
+.. math::
+
+    \overline{\sigma_{w}} = \Big( \sqrt{\sum_i w_{i,x}} \Big)^{-1}
+
+.. math::
+
+    w_{x} = \frac{1}{\sqrt{var_{x}}} \qquad var~\epsilon~\{\texttt{AWINERR_IMAGE}, \texttt{BWINERR_IMAGE}\}
+
+and removes sources which show standard deviations larger than the `RATIO` parameter allows for.
+
+
 .. note::
 
     By default, this filter is disabled.
@@ -121,6 +138,8 @@ Setting: `FILTER_TRAIL`  |  Parameters: `RATIO`
 Filter by Trail Size Distribution
 ---------------------------------
 Setting: `FILTER_T_DIST`  |  Parameters: `SIGMA`
+
+This filter acts on the SExtractor source ellipse parameters `AWIN_IMAGE` and `BWIN_IMAGE`. The standard deviation of each of the semi-major- and semi-minor axes is calculated. Sources with size parameters larger than the mean plus `SIGMA` times the standard deviation are rejected. This filter was implemented against ghosts introduced by bright stars, which can perfectly imitate linear motion depending on the dithering pattern of the observations.
 
 .. note::
 
@@ -137,11 +156,43 @@ Bright stars tend to introduce numerous artifacts like refraction spikes and ref
 
 Optional Analyses
 =================
+
+SkyBoT Cross-match
+------------------
 Setting: `CROSSMATCH_SKYBOT`  |  Parameters: `CROSSMATCH_RADIUS`, `OBSERVATORY_CODE`, `FOV_DIMENSIONS`
 
+Query the `SkyBoT <http://vo.imcce.fr/webservices/skybot/?conesearch>`_ database for SSOs in the field-of-view defined by `FOV_DIMENSIONS` and the center coordinates of each exposure for each observation epoch. The query result is saved as ``skybot/query_string.XML`` file. The positions of all SSO candidates are then compared to the predicted positions of known SSOs, and if a match is found within the `CROSSMATCH_RADIUS` (in arcsecond), the predicted SkyBoT parameters are added to the source metadata in the database.
+
+The `FOV_DIMENSIONS` parameter has to be defined as described on the SkyBoT webpage, a string of format "YxZ", where Y and Z are the image dimensions (integer or floating value) in degree.
+
+
+Cutout Extraction with SWARP
+----------------------------
 Setting: `EXTRACT_CUTOUTS`  |  Parameters: `SWARP_CONFIG`, `CUTOUT_SIZE`
 
+Use SWARP to create cutout images with dimension size `CUTOUT_SIZE` in pixel of each SSO detection. The cutouts are saved in the format ``cutouts/SOURCE_NUMBER__CATALOG_NUMBER.fits``. Using e.g. `imagemagick <https://www.imagemagick.org/script/index.php>`_, these cutouts can be quickly turned into little movies for visual confirmation of their nature. The `SWARP_CONFIG` file is used to configure the cutout extraction.
+
+
+Compute Fixed Aperture Magnitudes
+---------------------------------
 Setting: `FIXED_APER_MAG`  |  Parameters: `REFERENCE_FILTER`, `CUTOUT_SIZE`
 
+To measure SSO colours, the magnitudes in different bands using fixed apertures has to be computed. In the mandatory SExtractor part of the pipeline, the magnitudes are measured with variable Kron-apertures. This step uses the cutout images of SSOs to apply SExtractor in dual-image mode: One exposure is used to detect objects and compute the apertures, whereas the other is used for flux measurements. The detection image should be the deepest exposure available for best results. This band can be chosen using the `REFERENCE_FILTER` parameter, which has to be equal to the `FILTER` keyword of the detection image.
+
+After the fixed aperture magnitudes are calculated, the columns `MAG_CI` and `MAGERR_CI` are added to the database.
+
+If the cutout extraction with SWARP was set to False, the cutouts will be created in this step and saved to a temporary folder, which is deleted after the pipeline finishes.
+
+
+FLAGS
+=====
+
+The `FLAGS_SSOS` parameter is used to highlight sources which pass the filter but might be artifacts. An example are sources with jumps (outliers) in their observation epochs, which fools the linear motion filter. The flag values are represented by powers of 2 and added together, allowing for multiple flags to be set at the same time. The flag values are:
+
+    =============  =======================================
+    Integer Value     Meaning
+    -------------  ---------------------------------------
+          1        Source detection is an outlier in EPOCH
+    =============  =======================================
 
 .. [#] Appending the [SCI_EXTENSION] bit after .cat confuses the popular TOPCAT tool, so consistency in naming was neglected here.

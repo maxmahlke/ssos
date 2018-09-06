@@ -1,8 +1,8 @@
 .. SSO Pipeline documentation master file, created on Thu Aug 16 17:02:11 2018
 
-##########################################
-The Solar-System Objects ``ssos`` Pipeline
-##########################################
+#####################
+The ``ssos`` Pipeline
+#####################
 
 Recover astrometry and photometry of Solar System Objects (SSOs) in wide-field imaging surveys.
 

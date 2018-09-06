@@ -45,6 +45,6 @@ Target Directory
   │      ..
   │
   └───weights
-  │      exposure1_weight.fits  *optional*
-  │      expsoure2_weight.fits  *optional*
+  │      exposure1.weight  *optional*
+  │      expsoure2.weight  *optional*
   │      ..
