@@ -397,7 +397,7 @@ class Pipeline:
 
             # ------
             # Exectue SCAMP
-            sorted_catalogs = ' '.join([cat for cat in sorted(scamp_args['files'])
+            sorted_catalogs = ' '.join([cat for cat in sorted(scamp_args['files'])])
             cmd = ' '.join(['scamp', sorted_catalogs, '-c', scamp_args['config']])
             for param, value in scamp_args['overwrite_params'].items():
                 cmd += ' '.join([' -' + param, value])
