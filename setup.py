@@ -96,8 +96,14 @@ setup(
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
     project_urls={  # Optional
-        'Bug Reports': 'https://github.com/maxmahlke/SSO_Pipeline/issues',
-        'Source': 'https://github.com/maxmahlke/SSO_Pipeline/',
+        'Bug Reports': 'https://github.com/maxmahlke/ssos/issues',
+        'Source': 'https://github.com/maxmahlke/ssos/',
         'Docs': 'https://sso-pipeline.readthedocs.io/en/latest/'
+    }
+
+    entry_points={
+    'console_scripts': [
+        'ssos = ssos.__main__:main',
+        ]
     }
     )

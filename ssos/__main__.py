@@ -13,8 +13,7 @@ import os
 from core import Pipeline
 
 
-if __name__ == '__main__':
-
+def main():
     # ========
     # Start the pipeline.  This step initializes the log, the target directory,
     # evaluates and checks the pipeline settings and verifies the input images.
@@ -70,3 +69,7 @@ if __name__ == '__main__':
     pipeline.log.info('Output File: %s\nLog File: %s\n\n' %
                      (os.path.join(pipeline.paths['cats'], 'ssos.csv'),
                       os.path.join(pipeline.paths['logs'], pipeline.log_file)))
+
+
+if __name__ == '__main__':
+    main()
