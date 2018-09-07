@@ -99,11 +99,11 @@ setup(
         'Bug Reports': 'https://github.com/maxmahlke/ssos/issues',
         'Source': 'https://github.com/maxmahlke/ssos/',
         'Docs': 'https://sso-pipeline.readthedocs.io/en/latest/'
-    }
+    },
 
     entry_points={
-    'console_scripts': [
-        'ssos = ssos.__main__:main',
-        ]
-    }
+            'console_scripts': [
+            'ssos = ssos.__main__:main',
+             ]
+        }
     )
