@@ -10,8 +10,8 @@ setup(
     author='Max Mahlke',
     author_email='max.mahlke@cab.inta-csic.es',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    setup_requires=packages,
-    install_requires = packages,
+    setup_requires=['astropy', 'pandas', 'numpy', 'scipy', 'statsmodels'],
+    install_requires = ['astropy', 'pandas', 'numpy', 'scipy', 'statsmodels'],
     entry_points={
             'console_scripts': ['ssos = ssos.__main__:main']
             }
