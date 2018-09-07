@@ -438,8 +438,8 @@ class Pipeline:
             try:
                 assert args[0].number_of_sources() > 0
             except AssertionError:
-                raise NoSourcesRemainingException('\nNo source candidates left.\
-                                                   Stopping pipeline.\n')
+                raise NoSourcesRemainingException('\nNo source candidates left.'
+                                                   ' Stopping pipeline.\n')
                 sys.exit()
 
             return result
@@ -537,7 +537,7 @@ class Pipeline:
                         sources.loc[index, prop] = cat[2].data.field(prop)[index_in_sex_cat]
 
                     # Replace SCAMP magnitudes with the SExtractor ones
-                    for prop in ['MAG', 'MAGERR']:
+                    for prop in ['MAG', 'MAGERR', 'FLUX', 'FLUXERR']:
                         sources.loc[index, prop] = cat[2].data.field(prop + '_AUTO')[index_in_sex_cat]
 
                 # Add the image filename and science extension
@@ -596,21 +596,21 @@ class Pipeline:
                                                 'SKYBOT_DELTA': 'SKYBOT_DEC'}, inplace=True)
 
         # Rearrange columns
-        ordered_columns = ['SOURCE_NUMBER', 'CATALOG_NUMBER', 'RA', 'DEC', 'EPOCH', 'MAG', 'MAGERR', 'PM',
-                           'PMERR', 'PMRA',  'PMRA_ERR', 'PMDEC', 'PMDEC_ERR', 'MID_EXP_MJD', 'DATE-OBS_EXP',
+        ordered_columns = ['SOURCE_NUMBER', 'CATALOG_NUMBER', 'RA', 'DEC', 'EPOCH', 'MAG', 'MAGERR', 'FLUX', 'FLUXERR',
+                           'PM', 'PMERR', 'PMRA',  'PMRA_ERR', 'PMDEC', 'PMDEC_ERR', 'MID_EXP_MJD', 'DATE-OBS_EXP',
                            'EXPTIME_EXP', 'OBJECT_EXP', 'FILTER_EXP', 'RA_EXP', 'DEC_EXP', 'FILENAME_EXP',
-                           'SCI_EXTENSION', 'X_IMAGE', 'Y_IMAGE', 'AWIN_IMAGE', 'ERRA_IMAGE', 'BWIN_IMAGE',
-                           'ERRB_IMAGE', 'THETAWIN_IMAGE', 'ERRTHETA_IMAGE', 'ERRA_WORLD', 'ERRB_WORLD',
+                           'SCI_EXTENSION', 'XWIN_IMAGE', 'YWIN_IMAGE', 'AWIN_IMAGE', 'ERRAWIN_IMAGE', 'BWIN_IMAGE',
+                           'ERRBWIN_IMAGE', 'THETAWIN_IMAGE', 'ERRTHETAWIN_IMAGE', 'ERRA_WORLD', 'ERRB_WORLD',
                            'ERRTHETA_WORLD', 'FLAGS_EXTRACTION', 'FLAGS_SCAMP', 'FLAGS_IMA', 'FLAGS_SSOS']
 
-        self.sources = self.sources[ordered_columns]
-
         if self.settings['FIXED_APER_MAGS']:
-            ordered_columns[7:7] = ['MAG_CI', 'MAGERR_CI']
+            ordered_columns[7:7] = ['MAG_CI', 'MAGERR_CI', 'FLUX_CI', 'FLUXERR_CI']
 
         if self.settings['CROSSMATCH_SKYBOT']:
             ordered_columns[22:22] = ['SKYBOT_NUMBER', 'SKYBOT_NAME', 'SKYBOT_CLASS', 'SKYBOT_MAG',
                                       'SKYBOT_RA', 'SKYBOT_DEC', 'SKYBOT_PMRA', 'SKYBOT_PMDEC']
+
+        self.sources = self.sources[ordered_columns]
 
         # Save final database
         output = Table.from_pandas(self.sources)

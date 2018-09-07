@@ -1,4 +1,4 @@
-#!/Users/max/Applications/miniconda3/envs/py36/bin/python3
+#!/usr/bin/env python3
 '''
   Pipeline to search for Solar System objects in wide-field imaging surveys
   Information on the project can be found in arXiv:1711.02780

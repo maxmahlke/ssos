@@ -164,8 +164,9 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
                                                          str(detection.CATALOG_NUMBER)]) + '.cat')
 
             with fits.open(catalog) as cat:
-                sources.loc[ind, 'MAG_CI'] = cat[2].data.field('MAG_AUTO')[center_source_ind]
-                sources.loc[ind, 'MAGERR_CI'] = cat[2].data.field('MAGERR_AUTO')[center_source_ind]
+                for prop in ['MAG', 'FLUX']:
+                    sources.loc[ind, prop + '_CI'] = cat[2].data.field(prop + '_AUTO')[center_source_ind]
+                    sources.loc[ind, prop + 'ERR_CI'] = cat[2].data.field(prop + 'ERR_AUTO')[center_source_ind]
 
     log.info('\tDone.\n')
 

@@ -209,7 +209,6 @@ def linear_motion(sources, settings):
 
                     if sources.loc[indices[0], 'FLAGS_SSOS'] % 2 == 0:
                         sources.loc[indices, 'FLAGS_SSOS'] +=1  # Add outlier flag
-                    continue
 
                 else:
                     if not motion_is_linear(epochs, ra_groups[i], dec_groups[i], r_squared):
@@ -217,6 +216,9 @@ def linear_motion(sources, settings):
         else:
             if not motion_is_linear(epoch, ra, dec, r_squared):
                 sources = sources[sources.SOURCE_NUMBER != source_number]
+
+    if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] == 1):
+        sources = sources[sources.SOURCE_NUMBER != source_number]
 
     return sources
 
