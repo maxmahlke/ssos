@@ -32,11 +32,30 @@ The strength of the pipeline lies in the large degree of flexibility. All steps 
    :maxdepth: 2
 
    setup
+   instructions
    pipeline
-   implementation
    misc
 
 Acknowledgements
 ================
 
-.. Supervisors, sextractor, scamp, swarp, hygcat, astrowise, skybot, astropy, pandas,
+The *ssos* pipeline is built upon the previous work, experties and support by many teams:
+
+* SExtractor: Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source extraction, Astronomy & Astrophysics Supplement 317, 393
+
+* SCAMP: Bertin, E. 2006: Automatic Astrometric and Photometric Calibration with SCAMP, ASP Conference Series, Vol. 351, 2006, C. Gabriel, C. Arviset, D. Ponz, and E. Solano, eds., p. 112
+
+* SWARP: Bertin et al. 2002: The TERAPIX Pipeline, ASP Conference Series, Vol. 281, 2002 D.A. Bohlender, D. Durand, and T.H. Handley, eds., p. 228
+
+* This research has made use of IMCCE's SkyBoT VO tool and of the VizieR catalogue access tool, CDS, Strasbourg, France
+
+* The KiDS survey and astroWISE team, providing the first dataset this pipeline was developed on: Based on data products from observations made with ESO Telescopes at the La Silla Paranal Observatory under programme IDs 177.A-3016, 177.A-3017 and 177.A-3018, and on data products produced by Target/OmegaCEN, INAF-OACN, INAF-OAPD and the KiDS production team, on behalf of the KiDS consortium. OmegaCEN and the KiDS production team acknowledge support by NOVA and NWO-M grants. Members of INAF-OAPD and INAF-OACN also acknowledge the support from the Department of Physics & Astronomy of the University of Padova, and of the Department of Physics of Univ. Federico II (Naples).
+
+* This research made use of Astropy, a community-developed core Python package for Astronomy (Astropy Collaboration, 2018).
+
+* The numpy python package: Van der Walt and Colbert 2011, Computing in Science & Engineering 13, 22
+
+* The pandas python package: `McKinney et al. 2010 <https://www.researchgate.net/profile/Wes_Mckinney/publication/265001241_Data_Structures_for_Statistical_Computing_in_Python/links/5670827d08ae2b1f87aced0c.pdf>`_
+
+
+and the experts in their fields: Bruno Altieri, Hervé Bouy, Benoit Carry, Enrique Solano, Gijs Verdoes-Kleijn

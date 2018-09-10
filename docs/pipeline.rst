@@ -185,7 +185,7 @@ After the fixed aperture magnitudes are calculated, the columns `MAG_CI` and `MA
 If the cutout extraction with SWARP was set to False, the cutouts will be created in this step and saved to a temporary folder, which is deleted after the pipeline finishes.
 
 
-FLAGS
+Flags
 =====
 
 The `FLAGS_SSOS` parameter is used to highlight sources which pass the filter but might be artifacts. An example are sources with jumps (outliers) in their observation epochs, which fools the linear motion filter. The flag values are represented by powers of 2 and added together, allowing for multiple flags to be set at the same time. The flag values are:
