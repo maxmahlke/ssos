@@ -178,6 +178,7 @@ Compute Fixed Aperture Magnitudes
 Setting: `FIXED_APER_MAG`  |  Parameters: `REFERENCE_FILTER`, `CUTOUT_SIZE`
 
 To measure SSO colours, the magnitudes in different bands using fixed apertures has to be computed. In the mandatory SExtractor part of the pipeline, the magnitudes are measured with variable Kron-apertures. This step uses the cutout images of SSOs to apply SExtractor in dual-image mode: One exposure is used to detect objects and compute the apertures, whereas the other is used for flux measurements. The detection image should be the deepest exposure available for best results. This band can be chosen using the `REFERENCE_FILTER` parameter, which has to be equal to the `FILTER` keyword of the detection image.
+As not all source candidates are necessarily observed in this band, the value can be set to multiple bands, separated by commas. The script will then prioritize the source detections according to the order specified in this value, e.g. `FILTER1,FILTER2,FILTER3`. The source detection which was chosen as reference detection this way gets flagged by adding 2 to the `FLAGS_SSOS` output parameter.
 
 After the fixed aperture magnitudes are calculated, the columns `MAG_CI` and `MAGERR_CI` are added to the database.
 
@@ -193,6 +194,8 @@ The `FLAGS_SSOS` parameter is used to highlight sources which pass the filter bu
     Integer Value     Meaning
     -------------  ---------------------------------------
           1        Source detection is an outlier in EPOCH
+          2        Source detection used as reference for
+                   fixed aperture magnitude measurement
     =============  =======================================
 
 .. [#] Appending the [SCI_EXTENSION] bit after .cat confuses the popular TOPCAT tool, so consistency in naming was neglected here.

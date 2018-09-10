@@ -243,7 +243,7 @@ Input files are the survey images, passed to the pipeline in one directory:
 
 The images **must** have a ``.fits`` file ending to be recognized by the script.
 
-If weight images shall be passed to the SExtractor runs, specify the directory containing the weight images using the `WEIGHT_IMAGES` parameter in the ``pipeline_settings.ssos``. The weight images need to have the same filename as the exposures they shall be applied on, but with a ``.weight`` extension replacing the ``.fits``. [#]_
+If weight images shall be passed to the SExtractor runs, specify the directory containing the weight images using the `WEIGHT_IMAGES` parameter in the ``pipeline_settings.ssos``. The weight images need to have the same filename as the exposures they shall be applied on, but with a ``_SCI_EXTENSION.weight`` file extension replacing the ``.fits``, where `SCI_EXTENSION` has to be replaced by the appropriate extension integer. [#]_
 
 Output Files
 ============
