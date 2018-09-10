@@ -74,8 +74,8 @@ The default ``pipeline_settings.ssos`` file can be `found here <https://github.c
     | `SCI_EXTENSION`       | integer | 1 |  2 | 1,2            | Index of science extension of FITS images. For details, see               |
     |                       |         |                         | :ref:`sextractor_section`.                                                |
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-    | `WEIGHT_IMAGES`       | bool    | False | /tmp/weights    | Absolute path to weight images for SExtractor run. If False, SExtractor   |
-    |                       |         |                         | runs with settings according to ``ssos.sex`` file.                        |
+    | `WEIGHT_IMAGES`       | bool    | False | /tmp/weights    | Absolute path to weight images for SExtractor run. [#]_ If False,         |
+    |                       |         |                         | SExtractor runs with settings according to ``ssos.sex`` file.             |
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     | `SCAMP_CONFIG`        | string  | semp/sso.scamp          | SCAMP configuration file to link source detections at different epochs,   |
@@ -156,7 +156,7 @@ The default ``pipeline_settings.ssos`` file can be `found here <https://github.c
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     | `FIXED_APER_MAGS`     | bool    |    True | False         | Compute fixed aperture magnitudes for colours. See :ref:`optional`.       |
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-    | `REFERENCE_FILTER`    | string  |         gSDSS           | Filter to use as reference in SExtractor dual-image mode runs. Value has  |
+    | `REFERENCE_FILTER`    | string  |         gSDSS,uSDSS     | Filter to use as reference in SExtractor dual-image mode runs. Value has  |
     |                       |         |                         | to correspond to `FILTER` keyword in FITS header. See :ref:`optional`.    |
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
 
@@ -476,4 +476,5 @@ Again, the command-line API is heavily inspired by the SExtractor and SCAMP soft
       -FOV_DIMENSIONS value
                             Override FOV_DIMENSIONS setting.
 
+.. [#] The implementation does not allow for empty strings (e.g. to point to the current working directory). Instead, put the absolute path.
 .. [#] Do not forget to change the `WEIGHT_TYPE` parameter in ``ssos.sex`` to activate the weight images, only supplying the path to the directory is not enough.
