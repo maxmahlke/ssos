@@ -104,17 +104,18 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
         filter_found = False
         for filter_ in reference_filter:
             try:
-                reference_detection = source[source['FILTER_EXP'] == reference_filter].iloc[0]
+                reference_detection = source.loc[source['FILTER_EXP'] == filter_].iloc[0]
                 filter_found = True
             except IndexError:
                 continue
             if filter_found:
-                sources.iloc[source.index, 'FLAGS_SSOS'] += 2
+                sources.loc[(sources.SOURCE_NUMBER == reference_detection.SOURCE_NUMBER) &
+                            (sources.CATALOG_NUMBER == reference_detection.CATALOG_NUMBER), 'FLAGS_SSOS'] += 2
                 break
         else:
             from core import PipelineSettingsException
-                raise PipelineSettingsException('No detection of candidate %i found in reference filter %s.'\
-                                                % (number, reference_filter))
+            raise PipelineSettingsException('No detection of candidate %i found in reference filter %s.'\
+                                            % (number, reference_filter))
 
         detection_image = os.path.join(cutout_dir, '_'.join([str(number),
                                                              str(reference_detection['CATALOG_NUMBER'])])

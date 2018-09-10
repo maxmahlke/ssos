@@ -78,7 +78,7 @@ def pixel(sources, settings):
 
     # For all sources, check if the largest XWIN_IMAGE !and! YWIN_IMAGE differences
     # are smaller than delta_pixel.
-    for source_number, group in sources.groupby('SOURCE_NUMBER'):
+    for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
 
         x_img = group['XWIN_IMAGE']
         y_img = group['YWIN_IMAGE']
@@ -168,33 +168,28 @@ def linear_motion(sources, settings):
     r_squared = settings['R_SQU_M']
     outlier_threshold = settings['OUTLIER_THRESHOLD']
     min_detections = max(settings['DETECTIONS']) # lower limit of subgroup size
+    sources_to_remove = []
 
-    for source_number, group in sources.groupby('SOURCE_NUMBER'):
+    for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
 
         epoch = group['EPOCH']
         ra = group['ALPHA_J2000']
         dec = group['DELTA_J2000']
 
         if settings['IDENTIFY_OUTLIER']:
-
             # Detect outliers using the Median Absolute Deviation of the EPOCHS
             outlier_index = np.where(abs(np.diff(epoch)) > robust.mad(epoch) *
                                                            outlier_threshold)[0]
-
-            if len(outlier_index)  == 0:  # no outlier in EPOCH
-
-                # check edges
+            if len(outlier_index)  == 0:  # no outlier in EPOCH. Check edges
                 outlier_in_middle =  np.where(abs(np.diff(epoch[:-1])) > robust.mad(epoch[:-1]) *
                                                                          outlier_threshold)[0]
                 if len(outlier_in_middle) == 0:
-
                     if not motion_is_linear(epoch, ra, dec, r_squared):
-                        sources = sources[sources.SOURCE_NUMBER != source_number]
+                        sources_to_remove.append(source_number)
                         continue
 
                 else: # outlier found in middle (jump in epochs)
                     outlier_index = outlier_in_middle
-
 
             # Found outlier in EPOCH
             epoch_groups = np.split(epoch, outlier_index + 1)
@@ -202,24 +197,24 @@ def linear_motion(sources, settings):
             dec_groups   = np.split(dec,   outlier_index + 1)
 
             for i, epochs in enumerate(epoch_groups):
-
                 if len(epochs) <= min_detections: # if there's not sufficient detections
-
-                    indices = group.index[np.nonzero(np.in1d(epoch, epochs))[0]]
-
-                    if sources.loc[indices[0], 'FLAGS_SSOS'] % 2 == 0:
-                        sources.loc[indices, 'FLAGS_SSOS'] +=1  # Add outlier flag
+                    sources.loc[epochs.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
 
                 else:
                     if not motion_is_linear(epochs, ra_groups[i], dec_groups[i], r_squared):
-                        sources = sources[sources.SOURCE_NUMBER != source_number]
+                        sources_to_remove.append(source_number)
+
+            
+        # FLAG_SSOS is only uneven if detection is outlier
+        if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] % 2 == 1):
+            sources_to_remove.append(source_number)
+
+
         else:
             if not motion_is_linear(epoch, ra, dec, r_squared):
-                sources = sources[sources.SOURCE_NUMBER != source_number]
+                sources_to_remove.append(source_number)
 
-    if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] == 1):
-        sources = sources[sources.SOURCE_NUMBER != source_number]
-
+    sources = sources[~sources.SOURCE_NUMBER.isin(sources_to_remove)]
     return sources
 
 
@@ -250,7 +245,7 @@ def constant_trail(sources, settings):
 
     ratio = settings['RATIO']
 
-    for source_number, group in sources.groupby('SOURCE_NUMBER'):
+    for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
 
         epochs = group['EPOCH']
         awin = group['AWIN_IMAGE']
@@ -296,7 +291,7 @@ def trail_distribution(sources, settings):
     mu_b, std_b = np.mean(b), np.std(b)
 
     # Check if for any source any AWIN or BWIN value outside mu + sigma * std
-    for source_number, group in sources.groupby('SOURCE_NUMBER'):
+    for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
         if any(group['AWIN_IMAGE'] > mu_a + sigma * std_a):
             sources = sources[sources.SOURCE_NUMBER != source_number]
         if any(group['BWIN_IMAGE'] > mu_b + sigma * std_b):
@@ -339,7 +334,7 @@ def star_catalog(sources, settings):
     stars = stars[(stars['dec'] > lower_dec) &\
                   (stars['dec'] < upper_dec)]
 
-    for source_number, group in sources.groupby('SOURCE_NUMBER'):
+    for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
 
             mean_ra = np.mean(group['ALPHA_J2000'])
             mean_dec = np.mean(group['DELTA_J2000'])

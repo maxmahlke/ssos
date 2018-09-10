@@ -56,7 +56,7 @@ def init_argparse():
 
 
     for val in ['SEX_CONFIG', 'SEX_PARAMS', 'SEX_FILTER', 'SEX_NNW', 'SCAMP_CONFIG', 'SWARP_CONFIG',
-                'SCI_EXTENSION', 'WEIGHT_IMAGES' 'DETECTIONS', 'PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL',
+                'SCI_EXTENSION', 'WEIGHT_IMAGES', 'DETECTIONS', 'PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL',
                 'OUTLIER_THRESHOLD', 'R_SQU_M', 'R_SQU_T', 'SIGMA', 'DISTANCE', 'HYGCAT',
                 'CROSSMATCH_RADIUS', 'CUTOUT_SIZE', 'REFERENCE_FILTER', 'OBSERVATORY_CODE',
                 'FOV_DIMENSIONS']:
