@@ -10,7 +10,7 @@
 
 import os
 
-from core import Pipeline
+from ssos.core import Pipeline
 
 
 def main():

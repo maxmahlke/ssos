@@ -2,12 +2,12 @@
 from setuptools import setup, find_packages
 from os import path
 
-with open("README.md", 'r') as rm:
+with open('README.md', 'r') as rm:
     long_description = rm.read()
 
 setup(
     name='ssos',
-    version='0.9.dev0',
+    version='1.0',
     description='ssos Pipeline',
     url='https://github.com/maxmahlke/ssos',
     author='Max Mahlke',

@@ -12,7 +12,7 @@ Getting started
 Installing the Pipeline
 =======================
 
-Clone the `GitHub Repository <https://github.com/maxmahlke/SSO_Pipeline>`_ or download the `zip file <https://github.com/maxmahlke/SSO_Pipeline/archive/master.zip>`_.
+Clone the `GitHub Repository <https://github.com/maxmahlke/ssos>`_ or download the `zip file <https://github.com/maxmahlke/ssos/archive/master.zip>`_.
 
 The pipeline requires the following additional `python` packages: `astropy`, `numpy`, `pandas`, `scipy`, and `statsmodels`. You can quickly install them using the following command within the package directory
 
@@ -43,7 +43,7 @@ Make sure that the astrOmatic binaries :bash:`sex`, :bash:`scamp`, and :bash:`sw
 Pipeline Setting Files
 ======================
 
-The default ``pipeline_settings.ssos`` file can be `found here <https://github.com/maxmahlke/SSO_Pipeline/blob/master/sso_pipeline/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
+The default ``pipeline_settings.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
 
 .. _Guide to SExtractor: http://astroa.physics.metu.edu.tr/MANUALS/sextractor/Guide2source_extractor.pdf
 

@@ -10,13 +10,13 @@ import astropy.units as u
 import numpy as np
 from pandas import Series
 
-import filt
-from opt import extract_cutouts
-from opt import compute_aperture_magnitudes
-from opt import crossmatch_skybot
-from utils import create_target_dir
-from utils import init_argparse
-from utils import init_logger
+import ssos.filt as filt
+from ssos.opt import extract_cutouts
+from ssos.opt import compute_aperture_magnitudes
+from ssos.opt import crossmatch_skybot
+from ssos.utils import create_target_dir
+from ssos.utils import init_argparse
+from ssos.utils import init_logger
 
 
 
