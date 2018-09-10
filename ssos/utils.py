@@ -40,9 +40,9 @@ def init_argparse():
 
     parser.add_argument('--swarp', action='store_true',
                         help='Force SWARP runs')
+
     parser.add_argument('--skybot', action='store_true',
                         help='Force SkyBoT query')
-
 
     group = parser.add_argument_group('Filter Settings')
 
@@ -64,11 +64,8 @@ def init_argparse():
         group.add_argument('-'+val, metavar='value', action='store',
                            help='Override ' + val + ' setting.')
 
-    if len(sys.argv)==1:
-        parser.print_help(sys.stderr)
-        sys.exit()
-
     args = parser.parse_args()
+
     return args
 
 

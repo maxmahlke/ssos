@@ -9,6 +9,18 @@
 '''
 
 import os
+import sys
+
+if len(sys.argv) == 1:
+    from ssos import GREETING
+    print(GREETING)
+    sys.exit()
+
+if sys.argv[1] in ['-d', '--default']:
+    path_to_module = os.path.dirname(__file__)
+    os.system('cp -r {%s,%s} .' % (os.path.join(path_to_module, 'semp'),
+                                   os.path.join(path_to_module, 'pipeline_settings.ssos')))
+    sys.exit()
 
 from ssos.core import Pipeline
 

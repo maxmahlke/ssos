@@ -37,13 +37,16 @@ Make sure that the astrOmatic binaries :bash:`sex`, :bash:`scamp`, and :bash:`sw
     $ swarp --version
     SWarp version 2.38.1 (2018-06-28)
 
-
+After installing, you can run the script ``ssos`` from anywhere in your system.
 
 
 Pipeline Setting Files
 ======================
 
 The default ``pipeline_settings.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
+
+.. note::
+    The default configuration file ``pipeline_settings.ssos`` and the auxiliary SExtractor, SCAMP, and SWARP setup files are included in the ``python`` package and can be copied to the current working directory using the :bash: `ssos --default` syntax.
 
 .. _Guide to SExtractor: http://astroa.physics.metu.edu.tr/MANUALS/sextractor/Guide2source_extractor.pdf
 
