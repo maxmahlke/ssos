@@ -314,8 +314,8 @@ class Pipeline:
 
         if self.settings['WEIGHT_IMAGES']:
             sex_args['overwrite_params']['WEIGHT_IMAGE'] = os.path.join(self.settings['WEIGHT_IMAGES'],
-                                                           os.path.splitext(os.path.basname(image))[0]\
-                                                           + '_%i.weight' % extension)
+                                                           os.path.basname(image).replace(
+                                                           '.fits', '_%i.weight' % extension))
 
         if self.log.level <= 10:  # if we're at DEBUG log level, print SExtractor output
             sex_args['overwrite_params']['VERBOSE_TYPE'] = 'NORMAL'
