@@ -33,5 +33,6 @@ setup(
     entry_points = {
                     'console_scripts': ['ssos = ssos.__main__:main']
                    },
+    include_package_data=True,
     python_requires = '>=3'
     )
