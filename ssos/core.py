@@ -267,8 +267,12 @@ class Pipeline:
                     dec = header['DECDEG']
 
                 except KeyError:
-                    raise PipelineSettingsException('Could not find neither RA/DEC nor RADEG/DECDEG '
-                                                    'keywords in FITS header. Is the SCI_EXTENSION correct?')
+                    try:
+                        ra = header['CRVAL1']
+                        dec = header['CRVAL2']
+                    except KeyError:
+                        raise PipelineSettingsException('Could not find RA/DEC, RADEG/DECDEG, or CRVAL1/CRVAL2 '
+                                                        'keywords in FITS header. Is the SCI_EXTENSION correct?')
 
             ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
             object_kw = header['OBJECT']
@@ -565,8 +569,12 @@ class Pipeline:
                         sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header['RA']
                         sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header['DEC']
                     except KeyError:
-                        sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header['RADEG']
-                        sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header['DECDEG']
+                        try:
+                            sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header['RADEG']
+                            sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header['DECDEG']
+                        except KeyError:
+                            sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header['CRVAL1']
+                            sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header['CRVAL2']
 
         sources['MID_EXP_MJD'] = sources.apply(lambda x: (Time(x['DATE-OBS_EXP'], format='isot') +
                                                float(x['EXPTIME_EXP']) / 2 * u.second).mjd, axis=1)
