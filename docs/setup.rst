@@ -168,7 +168,7 @@ The configuration file can be formatted with tabs and spaces. Comments are marke
 .. note:: The pipeline script first checks if the `-c` flag is pointing to a configuration file. If not, it looks for a file called `pipeline_settings.ssos` in the current working directory. If no file is found, the hard-coded default values are used. Any parameter can be overwritten temporarily by using the appropriate flag, see :ref:`Command-Line API <Command-Line API>`.
 
 
-Survey-specific changes
+Survey-Specific Changes
 =======================
 
 It is highly unlikely that the pipeline will give you the optimum result (clean and complete sample of SSOs) right out-of-the-box. You likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
