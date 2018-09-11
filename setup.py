@@ -15,7 +15,7 @@ setup(
     long_description = long_description,
     long_description_content_type = 'text/markdown',
     packages=find_packages(exclude = ['contrib', 'docs', 'tests']),
-    keywords = ['astronomy astrophysics solar system data pipeline']
+    keywords = ['astronomy astrophysics solar system data pipeline'],
     setup_requires = [
                       'astropy',
                       'pandas',

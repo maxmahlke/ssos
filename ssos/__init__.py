@@ -3,7 +3,7 @@ version = '1.0.1'
 
 
 GREETING = '''
-       *       +      ssos pipeline 1.0
+       *       +      ssos pipeline 1.0.1
    +        x
         '             https://sso-pipeline.readthedocs.io
 *   +     _.::'   |
