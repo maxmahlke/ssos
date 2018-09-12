@@ -52,16 +52,16 @@ class Pipeline:
         self.log.info('\n\t--- SSO Recovery Pipeline ---\t\t--- {} ---\n\n'
                       .format(time.strftime("%H:%M:%S %Y/%m/%d")))
 
-        # Reading and checking the settings
-        self.settings = self._set_settings()
-        self.settings = self._check_settings(self.settings)
-
         # Assert that images are found and contain the required header keywords
         self.images = [os.path.join(self.paths['images'], image) for image in
                        os.listdir(self.paths['images']) if image.endswith('.fits')]
         assert len(self.images) > 0, 'No images found in %s! Assure that they have a .fits \
                                       extension' % self.paths['images']
         self._print_field_info()
+
+        # Reading and checking the settings
+        self.settings = self._set_settings()
+        self.settings = self._check_settings(self.settings)
 
         self.steps = [param for param in FILTER_STEPS.keys() if self.settings[param]]
         self.analysis_steps = [param for param in ANALYSIS_STEPS.keys() if self.settings[param]]
