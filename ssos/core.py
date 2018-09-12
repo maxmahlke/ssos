@@ -57,11 +57,12 @@ class Pipeline:
                        os.listdir(self.paths['images']) if image.endswith('.fits')]
         assert len(self.images) > 0, 'No images found in %s! Assure that they have a .fits \
                                       extension' % self.paths['images']
-        self._print_field_info()
 
         # Reading and checking the settings
         self.settings = self._set_settings()
         self.settings = self._check_settings(self.settings)
+
+        self._print_field_info()
 
         self.steps = [param for param in FILTER_STEPS.keys() if self.settings[param]]
         self.analysis_steps = [param for param in ANALYSIS_STEPS.keys() if self.settings[param]]
@@ -151,18 +152,23 @@ class Pipeline:
         settings - dict, dictionary containing PARAMETER: VALUE pairs
         '''
 
+        # Unpack provided DETECTIONS and SCI extension(s) into list
+        for param in ['SCI_EXTENSION', 'DETECTIONS']:
+            try:
+                settings[param] = [int(character) for character in settings[param].split(',')]
+            except ValueError:
+                raise PipelineSettingsException('%s value invalid' % param)
+
         # Check image header keywords
         with fits.open(self.images[0]) as exposure:
-
             header = exposure[self.settings['SCI_EXTENSION'][0]].header
-
             for kw in ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']:
                 try:
                     _ = header[self.settings[kw]]
 
                 except KeyError:
                     raise PipelineSettingsException('Could not find keyword %s in FITS header.\
-                                                     Is the SCI_EXTENSION correct?' % kw)
+                                                     Is the SCI_EXTENSION correct?' % self.settings[kw])
 
 
         # Check that config files exist
@@ -179,13 +185,6 @@ class Pipeline:
                                                  settings['WEIGHT_IMAGES'])
         else:
             settings['WEIGHT_IMAGES'] = False
-
-        # Unpack provided DETECTIONS and SCI extension(s) into list
-        for param in ['SCI_EXTENSION', 'DETECTIONS']:
-            try:
-                settings[param] = [int(character) for character in settings[param].split(',')]
-            except ValueError:
-                raise PipelineSettingsException('%s value invalid' % param)
 
         # Convert filter strings to booleans
         for param in ['FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
@@ -222,9 +221,11 @@ class Pipeline:
 
     def _print_field_info(self):
         ''' Prints RA, DEC, and OBJECT keywords to log '''
-        ra = self.settings['RA']
-        dec = self.settings['DEC']
-        object_ = self.settings['OBJECT']
+        with fits.open(self.images[0]) as exposure:
+            header = exposure[self.settings['SCI_EXTENSION'][0]].header
+            ra = header[self.settings['RA']]
+            dec = header[self.settings['DEC']]
+            object_ = header[self.settings['OBJECT']]
 
         ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
 
