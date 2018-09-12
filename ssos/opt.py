@@ -212,14 +212,15 @@ def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, 
     ra_field = group['RA_EXP'].tolist()[0]
     dec_field = group['DEC_EXP'].tolist()[0]
 
-    query_url = 'http://vo.imcce.fr/webservices/skybot/skybotconesearch_query.php?-ep=%s&-ra=%s&-dec=%s' \
-                '&-bd=%s&-mime=votable&-output=basic&-loc=%s&-filter=0&-objFilter=111&&-from=AF&-top=' % (mid_exposure, ra_field, dec_field, fov, obs_code)
+    query_url = 'http://vo.imcce.fr/webservices/skybot/skybotconesearch_query.php?-ep=%s&-ra=%s&-dec=%s'\
+                '&-bd=%s&-mime=votable&-output=basic&-loc=%s&-filter=0&-objFilter=111&&-from=AF&-top=' %\
+                (mid_exposure, ra_field, dec_field, fov, obs_code)
 
     output_filename = 'skybot_%s_%s_%s.xml' % (ra_field, dec_field, mid_exposure)
     output_filename = os.path.join(target_dir, output_filename)
 
     if not args.skybot and os.path.isfile(output_filename):
-            log.debug('Already queried %s, skipping download..' % output_filename)
+            log.debug('\nAlready queried %s, skipping download..' % output_filename)
     else:
         urllib.request.urlretrieve(query_url, output_filename)
 
