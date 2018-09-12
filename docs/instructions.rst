@@ -284,4 +284,4 @@ Again, the command-line API is heavily inspired by the SExtractor and SCAMP soft
       -FOV_DIMENSIONS value
                             Override FOV_DIMENSIONS setting.
 
-
+.. [#] Do not forget to change the `WEIGHT_TYPE` parameter in ``ssos.sex`` to activate the weight images, only supplying the path to the directory is not enough.

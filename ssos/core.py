@@ -19,55 +19,6 @@ from ssos.utils import init_argparse
 from ssos.utils import init_logger
 
 
-
-DEFAULT_SETTINGS = {
-
-        'SEX_CONFIG': 'semp/ssos.sex',
-        'SEX_PARAMS': 'semp/ssos.param',
-        'SEX_NNW'   : 'semp/default.nnw',
-        'SEX_FILTER': 'gauss_2.5_5x5.conv',
-        'SCI_EXTENSION': '1',
-
-        'SCAMP_CONFIG': 'ssos.scamp',
-        'SWARP_CONFIG': 'ssos.swarp',
-
-        'FILTER_DETEC': 'True',
-        'DETECTIONS'  : '1,2,3',
-
-        'FILTER_PM': 'True',
-        'PM_LOW': '0',
-        'PM_UP' : '200',
-        'PM_SNR': '20',
-
-        'FILTER_PIXEL': 'True',
-        'DELTA_PIXEL': '2',
-
-        'FILTER_MOTION': 'True',
-        'IDENTIFY_OUTLIER': 'True',
-        'OUTLIER_THRESHOLD': '2',
-        'R_SQU_M': '0.95',
-
-        'FILTER_TRAIL': 'False',
-        'RATIO': '0.25',
-
-        'FILTER_T_DIST': 'False',
-        'SIGMA': '2',
-
-        'FILTER_STAR_REGIONS': 'True',
-        'DISTANCE': '300',
-        'HYGCAT': 'hygdata_v3.csv',
-
-        'CROSSMATCH_SKYBOT': 'True',
-        'CROSSMATCH_RADIUS': '10',
-        'OBSERVATORY_CODE': '500',
-        'FOV_DIMENSIONS': '1.0x1.0',
-
-        'EXTRACT_CUTOUTS': 'False',
-        'FIXED_APER_MAGS': 'False',
-        'REFERENCE_FILTER': 'gSDSS'
-        }
-
-
 FILTER_STEPS = {
         'FILTER_DETEC':        filt.detections,
         'FILTER_PM':           filt.proper_motion,
@@ -139,7 +90,7 @@ class Pipeline:
         settings - dict, dictionary containing PARAMETER: VALUE pairs
         '''
 
-        settings = DEFAULT_SETTINGS
+        settings = {}
 
         try:
             if self.args.set_up:
@@ -150,15 +101,20 @@ class Pipeline:
         except IOError:
             self.log.debug('No config file provided in CWD or via -c flag.\
                             Using default settings.\n')
+            try:
+                set_up = open(os.path.join(os.path.dirname(__file__),
+                                           'pipeline_settings.ssos'))
+            except IOError:
+                raise PipelineSettingsException('No configuration file provided\
+                       and not found in package directory.')
 
-        else:
-            with set_up:
-                for line in set_up:
-                    if line == '\n' or line[0] == '#':
-                        continue
+        with set_up:
+            for line in set_up:
+                if line == '\n' or line[0] == '#':
+                    continue
 
-                    parameter, value = line.split()[:2]
-                    settings[parameter] = value
+                parameter, value = line.split()[:2]
+                settings[parameter] = value
 
         # Override values from command line
         for arg in vars(self.args):
@@ -194,6 +150,20 @@ class Pipeline:
         -----
         settings - dict, dictionary containing PARAMETER: VALUE pairs
         '''
+
+        # Check image header keywords
+        with fits.open(self.images[0]) as exposure:
+
+            header = exposure[self.settings['SCI_EXTENSION'][0]].header
+
+            for kw in ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']:
+                try:
+                    _ = header[self.settings[kw]]
+
+                except KeyError:
+                    raise PipelineSettingsException('Could not find keyword %s in FITS header.\
+                                                     Is the SCI_EXTENSION correct?' % kw)
+
 
         # Check that config files exist
         for file in ['SEX_CONFIG', 'SEX_PARAMS', 'SEX_NNW', 'SEX_FILTER',
@@ -247,39 +217,20 @@ class Pipeline:
                 except AssertionError:
                     raise PipelineSettingsException('The %s parameter has to be in range [0 - 1]'
                                                      % param)
-
         return settings
 
 
     def _print_field_info(self):
         ''' Prints RA, DEC, and OBJECT keywords to log '''
-        with fits.open(self.images[0]) as exposure:
+        ra = self.settings['RA']
+        dec = self.settings['DEC']
+        object_ = self.settings['OBJECT']
 
-            header = exposure[self.settings['SCI_EXTENSION'][0]].header
+        ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
 
-            try:
-                ra = float(header['RA'])  # float conversion ensures that unit is degree
-                dec = float(header['DEC'])
-
-            except (KeyError, ValueError):
-                try:
-                    ra = header['RADEG']
-                    dec = header['DECDEG']
-
-                except KeyError:
-                    try:
-                        ra = header['CRVAL1']
-                        dec = header['CRVAL2']
-                    except KeyError:
-                        raise PipelineSettingsException('Could not find RA/DEC, RADEG/DECDEG, or CRVAL1/CRVAL2 '
-                                                        'keywords in FITS header. Is the SCI_EXTENSION correct?')
-
-            ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
-            object_kw = header['OBJECT']
-
-            self.log.info('\t|\t'.join(['%i Exposures' % len(self.images),
-                                        '%s' % object_kw,
-                                        '%.2fdeg Ecliptic Latitude\n\n' % ecli_lat]))
+        self.log.info('\t|\t'.join(['%i Exposures' % len(self.images),
+                                    '%s' % object_,
+                                    '%.2fdeg Ecliptic Latitude\n\n' % ecli_lat]))
 
 
     def _run_SExtractor_on_single_image(self, image, extension):
@@ -344,7 +295,7 @@ class Pipeline:
                 # Make .ahead file with the EPOCH in MJD for SCAMP
                 # Following http://www.astromatic.net/forum/showthread.php?tid=501
                 with fits.open(image) as file:
-                    date_obs = file[extension].header['DATE-OBS']
+                    date_obs = file[extension].header[self.settings['DATE-OBS']]
 
                 mjd = Time(date_obs, format='isot').mjd
 
@@ -560,21 +511,13 @@ class Pipeline:
                 # Add exposure keywords
                 with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
 
-                    sources.loc[group.index, 'OBJECT_EXP']   = exposure[sci_ext].header['OBJECT']
-                    sources.loc[group.index, 'DATE-OBS_EXP'] = exposure[sci_ext].header['DATE-OBS']
-                    sources.loc[group.index, 'FILTER_EXP']   = exposure[sci_ext].header['FILTER']
-                    sources.loc[group.index, 'EXPTIME_EXP']  = exposure[sci_ext].header['EXPTIME']
+                    sources.loc[group.index, 'OBJECT_EXP']   = exposure[sci_ext].header[self.settings['OBJECT']]
+                    sources.loc[group.index, 'DATE-OBS_EXP'] = exposure[sci_ext].header[self.settings['DATE-OBS']]
+                    sources.loc[group.index, 'FILTER_EXP']   = exposure[sci_ext].header[self.settings['FILTER']]
+                    sources.loc[group.index, 'EXPTIME_EXP']  = exposure[sci_ext].header[self.settings['EXPTIME']]
 
-                    try:
-                        sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header['RA']
-                        sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header['DEC']
-                    except KeyError:
-                        try:
-                            sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header['RADEG']
-                            sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header['DECDEG']
-                        except KeyError:
-                            sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header['CRVAL1']
-                            sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header['CRVAL2']
+                    sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header[self.settings['RA']]
+                    sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header[self.settings['DEC']]
 
         sources['MID_EXP_MJD'] = sources.apply(lambda x: (Time(x['DATE-OBS_EXP'], format='isot') +
                                                float(x['EXPTIME_EXP']) / 2 * u.second).mjd, axis=1)

@@ -12,9 +12,15 @@ Getting Started
 Installing the Pipeline
 =======================
 
-Clone the `GitHub Repository <https://github.com/maxmahlke/ssos>`_ or download the `zip file <https://github.com/maxmahlke/ssos/archive/master.zip>`_.
+The _ssos_ pipeline is available from the Python Package Index via [#]_
 
-The pipeline requires the following additional `python` packages: `astropy`, `numpy`, `pandas`, `scipy`, and `statsmodels`. You can quickly install them using the following command within the package directory
+.. code-block:: bash
+
+    $ pip install ssos
+
+Alternatively, you can clone the `GitHub Repository <https://github.com/maxmahlke/ssos>`_ or download the `zip file <https://github.com/maxmahlke/ssos/archive/master.zip>`_.
+
+The pipeline requires the following additional `python` packages: `astropy`, `numpy`, `pandas`, `scipy`, and `statsmodels`. You can install them using the following command within the package directory
 
 .. code-block:: bash
 
@@ -43,7 +49,7 @@ After installing, you can run the script ``ssos`` from anywhere in your system.
 Pipeline Setting Files
 ======================
 
-The default ``pipeline_settings.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
+The default ``pipeline_settings.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/ssos/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
 
 .. note::
     The default configuration file ``pipeline_settings.ssos`` and the auxiliary SExtractor, SCAMP, and SWARP setup files are included in the ``python`` package and can be copied to the current working directory using the :bash:`ssos --default` syntax.
@@ -61,6 +67,25 @@ The default ``pipeline_settings.ssos`` file can be `found here <https://github.c
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     | Parameter             | Values  | Examples                |Description                                                                |
     +=======================+=========+=========================+===========================================================================+
+    | `SCI_EXTENSION`       | integer | 1 |  2 | 1,2            | Index of science extension of FITS images. For details, see               |
+    |                       |         |                         | :ref:`sextractor_section`.                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `WEIGHT_IMAGES`       | bool    | False | /tmp/weights    | Absolute path to weight images for SExtractor run. [#]_ If False,         |
+    |                       |         |                         | SExtractor runs with settings according to ``ssos.sex`` file.             |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `RA`                  | string  | RA / RADEG / CRVAL1     | FITS header keyword of right ascension in degree  [#]_                    |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `DEC`                 | string  | DEC / DECDEG / CRVAL2   | FITS header keyword of declination in degree                              |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `OBJECT`              | string  | OBJECT                  | FITS header OBJECT keyword                                                |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `DATE-OBS`            | string  | DATE-OBS / DATE         | FITS header keyword for observation date in ISOT format                   |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `FILTER`              | string  | FILTER                  | FITS header keyword for observation filter/band                           |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    | `EXPTIME`             | string  | EXPTIME / TEXP / EXP    | FITS header keyword for exposure time in seconds                          |
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
+    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     | `SEX_CONFIG`          | string  | semp/sso.sex            | SExtractor configuration file for source detection in the survey images.  |
     |                       |         |                         | For details, see :ref:`sextractor_section`.                               |
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
@@ -73,12 +98,6 @@ The default ``pipeline_settings.ssos`` file can be `found here <https://github.c
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     | `SEX_NNW`             | string  | semp/sso.nnw            | SExtractor neural network for galaxy-star differentiation. For details,   |
     |                       |         |                         | see :ref:`sextractor_section` and the `Guide to SExtractor`_.             |
-    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-    | `SCI_EXTENSION`       | integer | 1 |  2 | 1,2            | Index of science extension of FITS images. For details, see               |
-    |                       |         |                         | :ref:`sextractor_section`.                                                |
-    +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
-    | `WEIGHT_IMAGES`       | bool    | False | /tmp/weights    | Absolute path to weight images for SExtractor run. [#]_ If False,         |
-    |                       |         |                         | SExtractor runs with settings according to ``ssos.sex`` file.             |
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     +-----------------------+---------+-------------------------+---------------------------------------------------------------------------+
     | `SCAMP_CONFIG`        | string  | semp/sso.scamp          | SCAMP configuration file to link source detections at different epochs,   |
@@ -171,8 +190,7 @@ The configuration file can be formatted with tabs and spaces. Comments are marke
 Survey-Specific Changes
 =======================
 
-It is highly unlikely that the pipeline will give you the optimum result (clean and complete sample of SSOs) right out-of-the-box. You likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
-
+It is unlikely that the pipeline will give you the optimum result (clean and complete sample of SSOs) right out-of-the-box. Apart from the ``pipeline_settings.ssos`` parameters listed above, you likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
 
 
 ``ssos.sex``
@@ -210,30 +228,10 @@ It is highly unlikely that the pipeline will give you the optimum result (clean 
     - `GAIN_KEYWORD`
 
 
-
-``pipeline_settings.ssos``
-
-    - `SEX_CONFIG`
-
-    - `SEX_PARAMS`
-
-    - `SEX_FILTER`
-
-    - `SEX_NNW`
-
-    - `SCAMP_CONFIG`
-
-    - `SWARP_CONFIG`
-
-    - `HYGCAT`
-
-    - `OBSERVATORY CODE`
-
-    - `FOV SIZE`
-
-
 After these initial changes, you should experiment with the different SExtractor, SCAMP, and pipeline settings, adjusting e.g. the filter chain parameters. A good way to fine-tune is to pick a test field with several SSOs and run the pipeline with different configurations. The cutout images will tell you what types of artifacts are remaining and whether you accidentally filtered out SSOs by restricting the candidate filters too much.
 
 
+.. [#] The installation might fail if the ``pip`` tool is outdated, due to a change in the PyPI retrievals. If this is the case, run :bash:`$[sudo] pip install --upgrade pip` and repeat the install.
+.. [#] One day, FITS header keywords will be standardized. Until then, you have to adjust these parameters.
 .. [#] The implementation does not allow for empty strings (e.g. to point to the current working directory). Instead, put the absolute path.
-.. [#] Do not forget to change the `WEIGHT_TYPE` parameter in ``ssos.sex`` to activate the weight images, only supplying the path to the directory is not enough.
+
