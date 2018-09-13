@@ -395,8 +395,8 @@ class Pipeline:
             result = func(*args, **kwargs)
 
             if not args[0].number_of_sources() > 0:
-                raise NoSourcesRemainingException('\nNo source candidates left.'
-                                                   ' Stopping pipeline.\n')
+                raise NoSourcesRemainingException('\nNo source candidates left after %s.'
+                                                   ' Stopping pipeline.\n' % args[1])
                 sys.exit()
 
             return result
