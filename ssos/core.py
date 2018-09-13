@@ -22,8 +22,8 @@ from ssos.utils import init_logger
 FILTER_STEPS = {
         'FILTER_DETEC':        filt.detections,
         'FILTER_PM':           filt.proper_motion,
-        'FILTER_PIXEL':        filt.pixel,
         'FILTER_MOTION':       filt.linear_motion,
+        'FILTER_PIXEL':        filt.pixel,
         'FILTER_TRAIL':        filt.constant_trail,
         'FILTER_T_DIST':       filt.trail_distribution,
         'FILTER_STAR_REGIONS': filt.star_catalog
@@ -394,9 +394,7 @@ class Pipeline:
 
             result = func(*args, **kwargs)
 
-            try:
-                assert args[0].number_of_sources() > 0
-            except AssertionError:
+            if not args[0].number_of_sources() > 0:
                 raise NoSourcesRemainingException('\nNo source candidates left.'
                                                    ' Stopping pipeline.\n')
                 sys.exit()
