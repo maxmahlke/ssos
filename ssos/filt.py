@@ -204,7 +204,7 @@ def linear_motion(sources, settings):
                     if not motion_is_linear(epochs, ra_groups[i], dec_groups[i], r_squared):
                         sources_to_remove.append(source_number)
 
-            
+
         # FLAG_SSOS is only uneven if detection is outlier
         if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] % 2 == 1):
             sources_to_remove.append(source_number)
@@ -286,7 +286,8 @@ def trail_distribution(sources, settings):
     '''
 
     sigma = settings['SIGMA']
-
+    a = sources['AWIN_IMAGE']
+    b = sources['BWIN_IMAGE']
     mu_a, std_a = np.mean(a), np.std(a)
     mu_b, std_b = np.mean(b), np.std(b)
 
