@@ -39,7 +39,6 @@ def main():
 
     # ------
     # Run SCAMP on SExtractor catalogues
-    pipeline.log.info('\nRunning SCAMP..\t')
     pipeline.run_SCAMP()
 
     # ========

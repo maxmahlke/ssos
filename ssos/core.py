@@ -22,8 +22,8 @@ from ssos.utils import init_logger
 FILTER_STEPS = {
         'FILTER_DETEC':        filt.detections,
         'FILTER_PM':           filt.proper_motion,
-        'FILTER_PIXEL':        filt.pixel,
         'FILTER_MOTION':       filt.linear_motion,
+        'FILTER_PIXEL':        filt.pixel,
         'FILTER_TRAIL':        filt.constant_trail,
         'FILTER_T_DIST':       filt.trail_distribution,
         'FILTER_STAR_REGIONS': filt.star_catalog
@@ -246,6 +246,7 @@ class Pipeline:
         return
         ------
         cat, str - absolute path to SExtractor output catalog
+        date_obs, str - observation epoch from exposure
         '''
 
         # Name of output catalog
@@ -254,7 +255,9 @@ class Pipeline:
 
         if not self.args.sex and os.path.isfile(cat):
             self.log.debug('SExtractor catalog %s already exists! Skipping this sextraction..\n' % cat)
-            return cat
+            with fits.open(image) as exposure:
+                date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+            return cat, date_obs
 
         sex_args = {
 
@@ -286,24 +289,16 @@ class Pipeline:
         os.system(cmd)
 
         # ------
-        # Check if MJD-OBS keyword is in header. Else, create ahead file for SCAMP
         with fits.open(image) as exposure:
+            # Make .ahead file with the EPOCH in MJD for SCAMP
+            # Following http://www.astromatic.net/forum/showthread.php?tid=501
+            date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+            mjd = Time(date_obs, format='isot').mjd
 
-            try:
-                mjd_obs = exposure[extension].header['MJD-OBS']
+            with open(os.path.splitext(cat)[0] + '.ahead', 'w+') as file:
+                file.write('MJD-OBS = %.6f' % mjd)
 
-            except KeyError:
-                # Make .ahead file with the EPOCH in MJD for SCAMP
-                # Following http://www.astromatic.net/forum/showthread.php?tid=501
-                with fits.open(image) as file:
-                    date_obs = file[extension].header[self.settings['DATE-OBS']]
-
-                mjd = Time(date_obs, format='isot').mjd
-
-                with open(os.path.splitext(cat)[0] + '.ahead', 'w+') as file:
-                    file.write('MJD-OBS = %.6f' % mjd)
-
-        return cat
+        return cat, date_obs
 
 
     def run_SExtractor(self):
@@ -311,6 +306,7 @@ class Pipeline:
 
         self.SExtractor_catalogues = []
 
+        observation_epochs = []
         # Add progress bar
         if not self.args.quiet:
             sys.stdout.write('[%s]' % (' ' * len(self.images)))
@@ -320,14 +316,17 @@ class Pipeline:
         for image in self.images:
 
             for extension in self.settings['SCI_EXTENSION']:
-
-                cat = self._run_SExtractor_on_single_image(image, extension)
+                cat, date_obs = self._run_SExtractor_on_single_image(image, extension)
+                observation_epochs.append(date_obs)
                 self.SExtractor_catalogues.append(cat)
 
             if not self.args.quiet:
                 sys.stdout.write('-')
                 sys.stdout.flush()
 
+        # Sort the SExtractor catalogues by their observation epochs, important for SCAMP
+        self.SExtractor_catalogues = [cat for _, cat in sorted(zip(observation_epochs, 
+                                                               self.SExtractor_catalogues))]
 
     def run_SCAMP(self):
         ''' Run SCAMP on SExtractor catalogs '''
@@ -348,15 +347,15 @@ class Pipeline:
             }
 
         if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
-            self.log.debug('SCAMP catalogs %s and %s already exist!\
-                            Skipping SCAMP run..\n' % ( self.merged_cat, self.full_cat))
+            self.log.info('Reading SCAMP catalogues from file..\t')
 
         else:
+            self.log.info('\nRunning SCAMP..\t')
 
             # ------
             # Exectue SCAMP
-            sorted_catalogs = ' '.join([cat for cat in sorted(scamp_args['files'])])
-            cmd = ' '.join(['scamp', sorted_catalogs, '-c', scamp_args['config']])
+            catalogs = ' '.join(scamp_args['files'])
+            cmd = ' '.join(['scamp', catalogs, '-c', scamp_args['config']])
             for param, value in scamp_args['overwrite_params'].items():
                 cmd += ' '.join([' -' + param, value])
 
@@ -367,7 +366,7 @@ class Pipeline:
 
         # Add the SCAMP catalog numbers to the SExtactor catalogs dictionary
         self.SExtractor_catalogues = {i: filename for i, filename in
-                                                enumerate(sorted(self.SExtractor_catalogues), 1)}
+                                                enumerate(self.SExtractor_catalogues, 1)}
 
         # Create the full catalog as pipeline property
         with fits.open(self.full_cat) as full:
@@ -394,11 +393,9 @@ class Pipeline:
 
             result = func(*args, **kwargs)
 
-            try:
-                assert args[0].number_of_sources() > 0
-            except AssertionError:
-                raise NoSourcesRemainingException('\nNo source candidates left.'
-                                                   ' Stopping pipeline.\n')
+            if not args[0].number_of_sources() > 0:
+                raise NoSourcesRemainingException('\nNo source candidates left after %s.'
+                                                   ' Stopping pipeline.\n' % args[1])
                 sys.exit()
 
             return result
@@ -482,9 +479,9 @@ class Pipeline:
 
         sources = self.sources
 
-        for catalog_number, group in sources.groupby('CATALOG_NUMBER'):
+        for cat_number, group in sources.groupby('CATALOG_NUMBER'):
 
-            with fits.open(self.SExtractor_catalogues[catalog_number]) as cat:
+            with fits.open(self.SExtractor_catalogues[cat_number]) as cat:
                 xwin_img = Series(cat[2].data.field('XWIN_IMAGE')) # SExtractor X pixel coordinates
 
                 for index, source in group.iterrows():
@@ -501,24 +498,18 @@ class Pipeline:
 
                 # Add the image filename and science extension
                 image_filename = os.path.splitext(
-                                 os.path.basename(self.SExtractor_catalogues[catalog_number]))[0][:-2]\
+                                 os.path.basename(self.SExtractor_catalogues[cat_number]))[0][:-2]\
                                  + '.fits'  # [:-3] removes the extension suffix
 
-                sci_ext = int(os.path.splitext(self.SExtractor_catalogues[catalog_number])[0][-1])
+                sci_ext = int(os.path.splitext(self.SExtractor_catalogues[cat_number])[0][-1])
 
                 sources.loc[group.index, 'FILENAME_EXP'] = image_filename
                 sources.loc[group.index, 'SCI_EXTENSION'] = sci_ext
 
                 # Add exposure keywords
                 with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
-
-                    sources.loc[group.index, 'OBJECT_EXP']   = exposure[sci_ext].header[self.settings['OBJECT']]
-                    sources.loc[group.index, 'DATE-OBS_EXP'] = exposure[sci_ext].header[self.settings['DATE-OBS']]
-                    sources.loc[group.index, 'FILTER_EXP']   = exposure[sci_ext].header[self.settings['FILTER']]
-                    sources.loc[group.index, 'EXPTIME_EXP']  = exposure[sci_ext].header[self.settings['EXPTIME']]
-
-                    sources.loc[group.index, 'RA_EXP']   = exposure[sci_ext].header[self.settings['RA']]
-                    sources.loc[group.index, 'DEC_EXP']  = exposure[sci_ext].header[self.settings['DEC']]
+                    for prop in ['OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME', 'RA', 'DEC']:
+                        sources.loc[group.index, prop + '_EXP']   = exposure[sci_ext].header[self.settings[prop]]
 
         sources['MID_EXP_MJD'] = sources.apply(lambda x: (Time(x['DATE-OBS_EXP'], format='isot') +
                                                float(x['EXPTIME_EXP']) / 2 * u.second).mjd, axis=1)
@@ -582,13 +573,3 @@ class PipelineSettingsException(Exception):
 
 class NoSourcesRemainingException(Exception):
     pass
-
-
-
-
-
-
-
-
-
-
