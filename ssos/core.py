@@ -325,7 +325,7 @@ class Pipeline:
                 sys.stdout.flush()
 
         # Sort the SExtractor catalogues by their observation epochs, important for SCAMP
-        self.SExtractor_catalogues = [cat for _, cat in sorted(zip(observation_epochs, 
+        self.SExtractor_catalogues = [cat for _, cat in sorted(zip(observation_epochs,
                                                                self.SExtractor_catalogues))]
 
     def run_SCAMP(self):
@@ -347,7 +347,7 @@ class Pipeline:
             }
 
         if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
-            self.log.info('Reading SCAMP catalogues from file..\t')
+            self.log.info('\nReading SCAMP catalogues from file..\t')
 
         else:
             self.log.info('\nRunning SCAMP..\t')

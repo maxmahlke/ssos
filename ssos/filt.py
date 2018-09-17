@@ -205,9 +205,9 @@ def linear_motion(sources, settings):
                         sources_to_remove.append(source_number)
 
 
-        # FLAG_SSOS is only uneven if detection is outlier
-        if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] % 2 == 1):
-            sources_to_remove.append(source_number)
+            # FLAG_SSOS is only uneven if detection is outlier
+            if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] % 2 == 1):
+                sources_to_remove.append(source_number)
 
 
         else:
