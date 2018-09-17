@@ -65,7 +65,7 @@ def extract_cutouts(sources, settings, log, paths, args):
         for param, value in swarp_args['overwrite_params'].items():
             cmd += ' '.join([' -' + param, value])
 
-        log.debug('Executing SWARP command:\n%s' % cmd)
+        log.debug('\nExecuting SWARP command:\n%s' % cmd)
         if log.level > 10:  # Shown SWARP warnings only when debugging
             cmd += ' >/dev/null 2>&1'
         os.system(cmd)

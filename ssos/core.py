@@ -200,6 +200,11 @@ class Pipeline:
                 raise PipelineSettingsException('Could not evaluate %s value, has to be True or\
                                                  False' % param)
 
+        if settings['FILTER_MOTION']:
+            if not 1 in settings['DETECTIONS'] and not 2 in settings['DETECTIONS']:
+                raise PipelineSettingsException('When FILTER_MOTION is True, DETECTIONS needs\
+                                                 to contain "1,2".')
+
         # Convert numeric values to float
         for param in ['PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL', 'OUTLIER_THRESHOLD',
                       'R_SQU_M', 'RATIO', 'SIGMA', 'DISTANCE', 'CROSSMATCH_RADIUS',
@@ -359,7 +364,7 @@ class Pipeline:
             for param, value in scamp_args['overwrite_params'].items():
                 cmd += ' '.join([' -' + param, value])
 
-            self.log.debug('Executing SCAMP command:\n%s\n' % cmd)
+            self.log.debug('\nExecuting SCAMP command:\n%s\n' % cmd)
             if self.log.level > 10:  # Shown SCAMP output only when debugging
                     cmd += ' >/dev/null 2>&1'
             os.system(cmd)
