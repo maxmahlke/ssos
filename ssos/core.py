@@ -457,10 +457,10 @@ class Pipeline:
 
         # Add proper motion column.  Factor 8.75e6 converts to "/h
         sources_merged['PM'] = sources_merged.apply(lambda x:
-                               np.sqrt(x['PMALPHA_J2000']**2 + x['PMDELTA_J2000']**2) / 8.75e6,
+                               np.sqrt(x['PMALPHA_J2000']**2 + x['PMDELTA_J2000']**2),
                                axis=1)
         sources_merged['PMERR'] = sources_merged.apply(lambda x:
-                               np.sqrt(x['PMALPHAERR_J2000']**2 + x['PMDELTAERR_J2000']**2) / 8.75e6,
+                               np.sqrt(x['PMALPHAERR_J2000']**2 + x['PMDELTAERR_J2000']**2),
                                axis=1)
 
         # Add proper motions column from merged catalog to source database
