@@ -13,7 +13,7 @@ Input files are the survey images, passed to the pipeline in one directory:
 
 The images **must** have a ``.fits`` file ending to be recognized by the script.
 
-If weight images shall be passed to the SExtractor runs, specify the directory containing the weight images using the `WEIGHT_IMAGES` parameter in the ``pipeline_settings.ssos``. The weight images need to have the same filename as the exposures they shall be applied on, but with a ``_SCI_EXTENSION.weight`` file extension replacing the ``.fits``, where `SCI_EXTENSION` has to be replaced by the appropriate extension integer. [#]_
+If weight images shall be passed to the SExtractor runs, specify the directory containing the weight images using the `WEIGHT_IMAGES` parameter in the ``pipeline_settings.ssos``. The weight images need to have the same filename as the exposures they shall be applied on, but with a ``_SCI_EXTENSION.weight`` file extension replacing the ``.fits``, where `SCI_EXTENSION` has to be replaced by the appropriate extension integer.
 
 Output Files
 ============
@@ -284,4 +284,4 @@ Again, the command-line API is heavily inspired by the SExtractor and SCAMP soft
       -FOV_DIMENSIONS value
                             Override FOV_DIMENSIONS setting.
 
-.. [#] Do not forget to change the `WEIGHT_TYPE` parameter in ``ssos.sex`` to activate the weight images, only supplying the path to the directory is not enough.
+.. [#] In case weight maps are provided, the pipeline overrides the `WEIGHT_TYPE` parameter in the SExtractor config file with `MAP_WEIGHT`

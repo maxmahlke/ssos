@@ -36,7 +36,7 @@ MASK_TYPE        CORRECT        # type of detection MASKing: can be one of
 WEIGHT_TYPE      BACKGROUND     # type of WEIGHTing: NONE, BACKGROUND,
                                 # MAP_RMS, MAP_VAR or MAP_WEIGHT
 RESCALE_WEIGHTS  Y              # Rescale input weights/variances (Y/N)?
-WEIGHT_IMAGE     IMAGE[1]       # weight-map filename, second extension of exposure
+WEIGHT_IMAGE     WEIGHT_MAP     # weight-map filename, second extension of exposure
 WEIGHT_GAIN      Y              # modulate gain (E/ADU) with weights? (Y/N)
 WEIGHT_THRESH                   # weight threshold[s] for bad pixels
 

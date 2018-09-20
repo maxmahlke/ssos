@@ -116,13 +116,13 @@ def linear_function(x, m, n):
     return x*m + n
 
 
-def motion_is_linear(epoch, ra, dec, r_squared):
+def motion_is_linear(epoch, dim, dimerr, r_squared):
     '''
     Motion fitting function
 
     input
     ------
-    epoch - pd.Series, epoch of source
+    epoch - np.array, epoch of source
     ra - pd.Series, right ascension of source
     dec - pd.Series, declination of source
     r_squared - float, minimum r_squared for good fit
@@ -132,23 +132,20 @@ def motion_is_linear(epoch, ra, dec, r_squared):
     True if motion is linear else False
     '''
 
-    for i, dimension in enumerate([ra, dec]):
-        x = np.array(epoch)
-        y = np.array(dimension)
+    coords = dim.values
+    sigma = dimerr.values
 
-        try:
-            popt, pcov = curve_fit(linear_function, x, y)
-        except RuntimeError:
-            return False # If fit does not converge, discard this source
+    try:
+        popt, pcov = curve_fit(linear_function, epoch, coords, sigma=sigma, absolute_sigma=True)
+    except RuntimeError:
+        return False # If fit does not converge, discard this source
 
-        fitted_r_squared = calc_r_squared(linear_function(x, *popt), y)
+    fitted_r_squared = calc_r_squared(linear_function(epoch, *popt), coords)
 
-        if fitted_r_squared >= r_squared and i == 0:
-            pass
-        elif fitted_r_squared >= r_squared and i == 1:
-            return True # motion is linear in both dimensions
-        else:
-            return False
+    if fitted_r_squared >= r_squared:
+        return True
+    else:
+        return False
 
 
 def linear_motion(sources, settings):
@@ -165,54 +162,64 @@ def linear_motion(sources, settings):
         sources - pandas dataframe, sources data without the sources filtered in this step
     '''
 
-    r_squared = settings['R_SQU_M']
-    outlier_threshold = settings['OUTLIER_THRESHOLD']
-    min_detections = max(settings['DETECTIONS']) # lower limit of subgroup size
+    r_squ, out_thres, id_out = settings['R_SQU_M'], settings['OUTLIER_THRESHOLD'],\
+                               settings['IDENTIFY_OUTLIER']
+
+     # Lower limit of subgroup size
+    min_detections = max(settings['DETECTIONS'])
+
     sources_to_remove = []
 
     for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
+        # GROUP contains the detections of a single source
+        epoch = group['EPOCH'].values
 
-        epoch = group['EPOCH']
-        ra = group['ALPHA_J2000']
-        dec = group['DELTA_J2000']
-
-        if settings['IDENTIFY_OUTLIER']:
+        if id_out:
             # Detect outliers using the Median Absolute Deviation of the EPOCHS
             outlier_index = np.where(abs(np.diff(epoch)) > robust.mad(epoch) *
-                                                           outlier_threshold)[0]
+                                                           out_thres)[0]
             if len(outlier_index)  == 0:  # no outlier in EPOCH. Check edges
                 outlier_in_middle =  np.where(abs(np.diff(epoch[:-1])) > robust.mad(epoch[:-1]) *
-                                                                         outlier_threshold)[0]
+                                                                         out_thres)[0]
                 if len(outlier_in_middle) == 0:
-                    if not motion_is_linear(epoch, ra, dec, r_squared):
-                        sources_to_remove.append(source_number)
-                        continue
+                    for dim, dimerr in [(group['ALPHA_J2000'], group['ERRA_WORLD']),
+                                        (group['DELTA_J2000'], group['ERRB_WORLD'])]:
+                        if not motion_is_linear(epoch, dim, dimerr, r_squ):
+                            sources_to_remove.append(source_number)
+                            break
+                    continue
 
                 else: # outlier found in middle (jump in epochs)
                     outlier_index = outlier_in_middle
 
             # Found outlier in EPOCH
-            epoch_groups = np.split(epoch, outlier_index + 1)
-            ra_groups    = np.split(ra,    outlier_index + 1)
-            dec_groups   = np.split(dec,   outlier_index + 1)
+            subgroups = np.split(group[['EPOCH', 'ALPHA_J2000', 'DELTA_J2000',
+                                        'ERRA_WORLD', 'ERRB_WORLD']], outlier_index + 1)
 
-            for i, epochs in enumerate(epoch_groups):
-                if len(epochs) <= min_detections: # if there's not sufficient detections
-                    sources.loc[epochs.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
+            for subgroup in subgroups:
+
+                if len(subgroup) <= min_detections: # if there aren't sufficient detections
+                    sources.loc[subgroup.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
 
                 else:
-                    if not motion_is_linear(epochs, ra_groups[i], dec_groups[i], r_squared):
-                        sources_to_remove.append(source_number)
-
+                    epochs = subgroup['EPOCH']
+                    for dim, dimerr in [(subgroup['ALPHA_J2000'], subgroup['ERRA_WORLD']),
+                                        (subgroup['DELTA_J2000'], subgroup['ERRB_WORLD'])]:
+                        if not motion_is_linear(epochs, dim, dimerr, r_squ):
+                            sources_to_remove.append(source_number)
+                            break
+                    continue
 
             # FLAG_SSOS is only uneven if detection is outlier
             if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] % 2 == 1):
                 sources_to_remove.append(source_number)
 
-
         else:
-            if not motion_is_linear(epoch, ra, dec, r_squared):
-                sources_to_remove.append(source_number)
+            for dim, dimerr in [(group['ALPHA_J2000'], group['ERRA_WORLD']),
+                                (group['DELTA_J2000'], group['ERRB_WORLD'])]:
+                if not motion_is_linear(epoch, dim, dimerr, r_squ):
+                    sources_to_remove.append(source_number)
+                    break
 
     sources = sources[~sources.SOURCE_NUMBER.isin(sources_to_remove)]
     return sources
@@ -255,9 +262,7 @@ def constant_trail(sources, settings):
             x = np.array(epochs)
             y = np.array(dimension)
 
-            variance = group['ERRAWIN_IMAGE'] if i == 0 else group['ERRBWIN_IMAGE']
-            sigma = np.array([np.sqrt(var) if var != 0 else np.sqrt(np.mean(variance))
-                              for var in variance])
+            sigma = group['ERRAWIN_IMAGE'] if i == 0 else group['ERRBWIN_IMAGE']
 
             fitted_ratio = compare_std_and_sigma_of_average(y, sigma)
 

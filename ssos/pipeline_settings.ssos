@@ -36,8 +36,8 @@ DETECTIONS           1,2,3                   # Number of detections to filter
 
 FILTER_PM            True                    # Filter by proper motion range
 PM_LOW               0                       # Lower proper motion limit / "/h
-PM_UP                225                     # Upper proper motion limit / "/h
-PM_SNR               20                      # Lower limit of proper motion SNR
+PM_UP                300                     # Upper proper motion limit / "/h
+PM_SNR               0.5                      # Lower limit of proper motion SNR
 
 FILTER_PIXEL         True                    # Filter by pixel margin
 DELTA_PIXEL          2                       # Lower limit of pixel margin
