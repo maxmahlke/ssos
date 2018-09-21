@@ -46,7 +46,7 @@ def init_argparse():
 
     group = parser.add_argument_group('Filter Settings')
 
-    for prop in ['FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION', 'IDENTIFY_OUTLIERS',
+    for prop in ['FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION', 'IDENTIFY_OUTLIER',
                  'FILTER_TRAIL', 'FILTER_T_DIST', 'FILTER_STAR_REGIONS', 'CROSSMATCH_SKYBOT',
                  'EXTRACT_CUTOUTS', 'FIXED_APER_MAGS']:
 
