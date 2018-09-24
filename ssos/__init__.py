@@ -1,5 +1,5 @@
 name = 'ssos'
-version = '1.1.4'
+__version__ = '1.1.4'
 
 
 GREETING = '''
@@ -14,4 +14,4 @@ O -     *        '    ssos [-PARAMETER] [-VALUE] path/to/images
         _..:'         max.mahlke(at)cab.inta-csic.es
   +   (_.:
 
-        ''' % version
+        ''' % __version__

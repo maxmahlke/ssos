@@ -206,9 +206,8 @@ def linear_motion(sources, settings):
                     for dim, dimerr in [(subgroup['ALPHA_J2000'], subgroup['ERRA_WORLD']),
                                         (subgroup['DELTA_J2000'], subgroup['ERRB_WORLD'])]:
                         if not motion_is_linear(epochs, dim, dimerr, r_squ):
-                            sources_to_remove.append(source_number)
+                            sources.loc[subgroup.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
                             break
-                    continue
 
             # FLAG_SSOS is only uneven if detection is outlier
             if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] % 2 == 1):
