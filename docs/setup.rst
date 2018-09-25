@@ -222,6 +222,10 @@ It is unlikely that the pipeline will give you the optimum result (clean and com
 
     - `PHOTOMFLAG_KEY`
 
+Special care has to be taken with the `CROSSID_RADIUS`. It defines the maximum distance in arcsec between two source detections. Therefore, the `CROSSID_RADIUS` divided by the time between two sub-sequent exposures sets an upper limit on the proper motion of sources that can be detected in both exposures.
+Increasing the `CROSSID_RADIUS` will therefore allow for the detection of fast SSOs, however, it also increases the amount of randomly associated detections, making artifact detections more likely.
+A rule of thumb: The `CROSSID_RADIUS` divided by the longest time between two-exposures (lowest upper proper motion limit) should be around 100"/h.
+
 
 ``semp/ssos.swarp``
 

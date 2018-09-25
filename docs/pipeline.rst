@@ -108,6 +108,9 @@ All source detections which were identified as outliers in epoch space get +1 ad
 
     Add figures of fits, outliers, subgroup fits
 
+.. note::
+    The linear motion filter requires the detection filter both to be active and to filter at least all sources with 1 or 2 detections.
+
 
 Filter by Trail Consistency
 ---------------------------

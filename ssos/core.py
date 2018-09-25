@@ -201,7 +201,8 @@ class Pipeline:
                                                  False' % param)
 
         if settings['FILTER_MOTION']:
-            if not 1 in settings['DETECTIONS'] and not 2 in settings['DETECTIONS']:
+            if not setting['FILTER_DETEC'] or
+              (not 1 in settings['DETECTIONS'] and not 2 in settings['DETECTIONS']):
                 raise PipelineSettingsException('When FILTER_MOTION is True, DETECTIONS needs\
                                                  to contain "1,2".')
 
