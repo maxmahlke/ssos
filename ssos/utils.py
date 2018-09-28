@@ -56,10 +56,10 @@ def init_argparse():
 
 
     for val in ['SCI_EXTENSION', 'WEIGHT_IMAGES', 'RA', 'DEC', 'OBJECT', 'DATE_OBS', 'FILTER', 'EXPTIME',
-                'SEX_CONFIG', 'SEX_PARAMS', 'SEX_FILTER', 'SEX_NNW', 'SCAMP_CONFIG', 'SWARP_CONFIG',
-                'DETECTIONS', 'PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL', 'OUTLIER_THRESHOLD', 'R_SQU_M',
-                'RATIO', 'SIGMA', 'DISTANCE', 'HYGCAT', 'CROSSMATCH_RADIUS', 'CUTOUT_SIZE',
-                'REFERENCE_FILTER', 'OBSERVATORY_CODE', 'FOV_DIMENSIONS']:
+                'SEX_CONFIG', 'SEX_PARAMS', 'SEX_FILTER', 'SEX_NNW', 'SCAMP_CONFIG', 'ASTREF_CATALOG',
+                'CROSSID_RADIUS', 'SWARP_CONFIG', 'DETECTIONS', 'PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL',
+                'OUTLIER_THRESHOLD', 'R_SQU_M', 'RATIO', 'SIGMA', 'DISTANCE', 'HYGCAT', 'CROSSMATCH_RADIUS',
+                'CUTOUT_SIZE', 'REFERENCE_FILTER', 'OBSERVATORY_CODE', 'FOV_DIMENSIONS']:
 
         group.add_argument('-'+val, metavar='value', action='store',
                            help='Override ' + val + ' setting.')

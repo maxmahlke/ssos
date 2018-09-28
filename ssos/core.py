@@ -201,7 +201,7 @@ class Pipeline:
                                                  False' % param)
 
         if settings['FILTER_MOTION']:
-            if not setting['FILTER_DETEC'] or
+            if not settings['FILTER_DETEC'] or\
               (not 1 in settings['DETECTIONS'] and not 2 in settings['DETECTIONS']):
                 raise PipelineSettingsException('When FILTER_MOTION is True, DETECTIONS needs\
                                                  to contain "1,2".')
@@ -352,6 +352,12 @@ class Pipeline:
                 'FULLOUTCAT_NAME':   self.full_cat[:-6] + '.cat',
                 },
             }
+
+        if self.args.ASTREF_CATALOG is not None:
+            scamp_args['overwrite_params']['ASTREF_CATALOG'] = self.args.ASTREF_CATALOG
+
+        if self.args.CROSSID_RADIUS is not None:
+            scamp_args['overwrite_params']['CROSSID_RADIUS'] = str(self.args.CROSSID_RADIUS)
 
         if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
             self.log.info('\nReading SCAMP catalogues from file..\t')
