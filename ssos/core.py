@@ -47,7 +47,7 @@ class Pipeline:
         self.target_dir, self.paths = create_target_dir(self.args)
         self.log, self.log_file, self.start_time = init_logger(self.args, self.paths['logs'])
         self.log.info('\n\t--- SSO Recovery Pipeline ---\t\t--- {:s} ---\n\n'
-                      .format(time.strftime('%Y%m%d%H%M%S', self.start_time)))
+                      .format(time.strftime('%Y/%m/%d %H:%M:%S', self.start_time)))
 
         # Assert that images are found and contain the required header keywords
         self.images = [os.path.join(self.paths['images'], image) for image in
