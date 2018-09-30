@@ -94,7 +94,8 @@ def init_logger(args, log_dir):
     log = logging.getLogger(__name__)
     log.setLevel(numeric_level)
 
-    log_file = 'sso_{}.log'.format(time.strftime('%Y%m%d%H%M%S'))
+    start_time = time.struct_time(time.localtime())
+    log_file = 'sso_{:s}.log'.format(time.strftime('%Y%m%d%H%M%S', start_time))
 
     file_log = logging.FileHandler(os.path.join(log_dir, log_file))
     file_log.setLevel(numeric_level)
@@ -115,7 +116,7 @@ def init_logger(args, log_dir):
         log.error('\n')
 
     sys.excepthook = log_excepthook
-    return log, log_file
+    return log, log_file, start_time
 
 
 def create_target_dir(args):

@@ -42,15 +42,12 @@ class Pipeline:
 
     def __init__(self):
 
-        # Time pipeline execution
-        self.start_time = time.time()
-
         # Preparations: Handling of command line arguments
         self.args = init_argparse()
         self.target_dir, self.paths = create_target_dir(self.args)
-        self.log, self.log_file = init_logger(self.args, self.paths['logs'])
-        self.log.info('\n\t--- SSO Recovery Pipeline ---\t\t--- {} ---\n\n'
-                      .format(time.strftime("%H:%M:%S %Y/%m/%d")))
+        self.log, self.log_file, self.start_time = init_logger(self.args, self.paths['logs'])
+        self.log.info('\n\t--- SSO Recovery Pipeline ---\t\t--- {:s} ---\n\n'
+                      .format(time.strftime('%Y%m%d%H%M%S', self.start_time)))
 
         # Assert that images are found and contain the required header keywords
         self.images = [os.path.join(self.paths['images'], image) for image in
@@ -573,11 +570,11 @@ class Pipeline:
 
         # Save final database
         output = Table.from_pandas(self.sources)
-        output_filename = os.path.join(self.paths['cats'], 'ssos.csv')
+        output_filename = os.path.join(self.paths['cats'], 'ssos_{:s}.csv'.format(time.strftime('%Y%m%d%H%M%S', self.start_time)))
         output.write(output_filename, format='csv', overwrite=True)
 
         os.system('rm -r %s' % self.paths['tmp'])
-        self.run_time = time.time() - self.start_time
+        self.run_time = time.time() - time.mktime(self.start_time)
 
 
 class PipelineSettingsException(Exception):
