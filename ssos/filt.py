@@ -227,7 +227,7 @@ def linear_motion(sources, settings):
 def compare_std_and_sigma_of_average(y, sigma):
     ''' Compares weighted average uncertainty to standard deviation '''
 
-    weights = 1 / sigma
+    weights = 1 / sigma**2
     weighted_average_uncertainty = 1 / np.sqrt(np.sum(weights))
     standard_deviation_of_data = np.std(y)
     ratio = weighted_average_uncertainty / standard_deviation_of_data
@@ -253,17 +253,14 @@ def constant_trail(sources, settings):
 
     for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
 
-        epochs = group['EPOCH']
         awin = group['AWIN_IMAGE']
         bwin = group['BWIN_IMAGE']
 
         for i, dimension in enumerate([awin, bwin]):
-            x = np.array(epochs)
-            y = np.array(dimension)
 
             sigma = group['ERRAWIN_IMAGE'] if i == 0 else group['ERRBWIN_IMAGE']
 
-            fitted_ratio = compare_std_and_sigma_of_average(y, sigma)
+            fitted_ratio = compare_std_and_sigma_of_average(dimension, sigma)
 
             if fitted_ratio >= ratio and i == 0:
                 pass
@@ -277,6 +274,11 @@ def constant_trail(sources, settings):
 
 def trail_distribution(sources, settings):
     '''
+
+    ####
+    DEPRECTATED - Use the stellar catalogue filter instead.
+    ####
+
     Remove sources based on distribution of size parameters
 
     input
