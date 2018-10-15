@@ -18,7 +18,7 @@ If weight images shall be passed to the SExtractor runs, specify the directory c
 Output Files
 ============
 
-The script creates several directories in the target directory (CWD by default). The cats directory contains the SExtractor and SCAMP catalogues and the final output ssos.csv. For every SExtractor catalogue, there is also one .ahead file with the same filename. This file contains the observation date as MJD-OBS keyword, which is required for the subsequent run of SCAMP. SCAMP looks for extensions of catalogue headers in .ahead files.
+The script creates several directories in the target directory (CWD by default). The cats directory contains the SExtractor and SCAMP catalogues and the final output `ssos_$CURRENTDATETIME.csv`. For every SExtractor catalogue, there is also one .ahead file with the same filename. This file contains the observation date as MJD-OBS keyword, which is required for the subsequent run of SCAMP. SCAMP looks for extensions of catalogue headers in .ahead files.
 
 
 ::
@@ -45,7 +45,7 @@ The script creates several directories in the target directory (CWD by default).
   │      ..
   │
   └───logs
-  │      sso_$DATETIME.log
+  │      ssos_$DATETIME.log
   │
   └───skybot
   │      skybot_query_string1.xml
@@ -58,7 +58,7 @@ The script creates several directories in the target directory (CWD by default).
   │      ..
 
 
-The cutouts directory contains the cutouts made by SWarp of the SSO detections. In the logs directory, you can find the log file of the pipeline, following the naming scheme sso_$CURRENTDATETIME.log. The skybot directory stores the SkyBoT query results.
+The cutouts directory contains the cutouts made by SWarp of the SSO detections. In the logs directory, you can find the log file of the pipeline, following the naming scheme `ssos_$CURRENTDATETIME.log`, carrying the same DATETIME appendix as the output `csv` file. The skybot directory stores the SkyBoT query results.
 
 To judge the results of the pipeline, first go into the logfile. It looks like this:
 

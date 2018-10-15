@@ -95,7 +95,7 @@ def init_logger(args, log_dir):
     log.setLevel(numeric_level)
 
     start_time = time.struct_time(time.localtime())
-    log_file = 'sso_{:s}.log'.format(time.strftime('%Y%m%d%H%M%S', start_time))
+    log_file = 'ssos_{:s}.log'.format(time.strftime('%Y%m%d%H%M%S', start_time))
 
     file_log = logging.FileHandler(os.path.join(log_dir, log_file))
     file_log.setLevel(numeric_level)
