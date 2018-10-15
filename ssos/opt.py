@@ -222,7 +222,10 @@ def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, 
     if not args.skybot and os.path.isfile(output_filename):
             log.debug('\nAlready queried %s, skipping download..' % output_filename)
     else:
-        urllib.request.urlretrieve(query_url, output_filename)
+        try:
+            urllib.request.urlretrieve(query_url, output_filename)
+        except urllib.error.URLError as err:
+            log.info('SkyBoT query failed: {0}'.format(err))
 
     # ------
     # Cross-match query results with sources from that epoch
@@ -235,7 +238,7 @@ def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, 
         warnings.filterwarnings('default')
         skybot_sources = pd.DataFrame(np.ma.filled(skybot_sources))
 
-    except IndexError:
+    except (IndexError, FileNotFoundError):
         # No matches in SkyBoT database were found or error in query
         skybot_sources = pd.DataFrame({'number': [''],
                                        'name': [''],
@@ -325,5 +328,5 @@ def crossmatch_skybot(sources, settings, log, paths, args):
                                                     fov=fov, obs_code=obs_code, log=log, args=args,
                                                     crossmatch_radius=crossmatch_radius)
 
-    log.info(' %i matches found.\n' % len(set(sources[sources['SKYBOT_NAME']!='']['SOURCE_NUMBER'])))
+    log.info(' %i matched.\n' % len(set(sources[sources['SKYBOT_NAME']!='']['SOURCE_NUMBER'])))
     return sources

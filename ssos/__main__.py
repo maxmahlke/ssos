@@ -10,6 +10,7 @@
 
 import os
 import sys
+import time
 
 if len(sys.argv) == 1:
     from ssos import GREETING
@@ -78,7 +79,9 @@ def main():
                       'The analysis ran in %i seconds\n\n' % pipeline.run_time]))
 
     pipeline.log.info('Output File: %s\nLog File: %s\n\n' %
-                     (os.path.join(pipeline.paths['cats'], 'ssos.csv'),
+                     (os.path.join(pipeline.paths['cats'],
+                                   'ssos_{:s}.csv'.format(time.strftime('%Y%m%d%H%M%S',
+                                                          pipeline.start_time))),
                       os.path.join(pipeline.paths['logs'], pipeline.log_file)))
 
 
