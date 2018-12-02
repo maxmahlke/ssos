@@ -125,6 +125,9 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
         # Call SExtractor in dual image mode
         for image in cutouts:
 
+            if number not in image:
+                continue
+
             cat = os.path.join(paths['cutouts'], os.path.basename(image.replace('.fits', '.cat')))
 
             if image == detection_image:
@@ -200,7 +203,6 @@ def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, 
     group - pd.DataFrame group, sources grouped by DATE-OBS with SkyBoT data added
     '''
 
-
     # ------
     # Download SkyBoT query results to VOTABLE
 
@@ -273,12 +275,11 @@ def _cross_match(source, skybot_sources, crossmatch_radius):
     # Find SkyBoT source that is closest in angular separation to KiDS source  # in degrees
     distances_to_source = abs(np.sqrt((skybot_sources['_raj2000'] - source['ALPHA_J2000'])**2 +\
                                       (skybot_sources['_decj2000'] - source['DELTA_J2000'])**2))
-    min_distance_to_skybot_source = min(distances_to_source)
 
-    if min_distance_to_skybot_source < crossmatch_radius:
+    if min(distances_to_source) < crossmatch_radius:
 
         skybot_source_index = distances_to_source.argsort()[:1][0]
-        skybot_match = skybot_sources.iloc[skybot_source_index]
+        skybot_match = skybot_sources.iloc[np.argmin(distances_to_source)]
 
         source['SKYBOT_NUMBER']  = skybot_match['num']
         source['SKYBOT_NAME']    = skybot_match['name']

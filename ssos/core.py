@@ -52,8 +52,8 @@ class Pipeline:
         # Assert that images are found and contain the required header keywords
         self.images = [os.path.join(self.paths['images'], image) for image in
                        os.listdir(self.paths['images']) if image.endswith('.fits')]
-        assert len(self.images) > 0, 'No images found in %s! Assure that they have a .fits \
-                                      extension' % self.paths['images']
+        assert len(self.images) > 0, 'No images found in %s! Ensure that they have a .fits'
+                                     ' extension' % self.paths['images']
 
         # Reading and checking the settings
         self.settings = self._set_settings()
