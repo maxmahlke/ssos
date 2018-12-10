@@ -100,7 +100,7 @@ To tackle this problem, the `IDENTIFY_OUTLIER` option was introduced. If `True`,
    \mathrm{MAD} = \mathrm{median}(|E_{i} - \mathrm{median}(E)|)
 
 This calculates the median duration between one observation and the median observation epoch. The median is not affected by outliers, therefore it can be used to identify jumps in the epochs. If the time difference between any two observations is larger than `MAD*OUTLIER_THRESHOLD`, the source detections are split into subgroups. If more than one of the jumps is found, the detections are split into several subgroups.
-As long as the number of detections in each subgroup is larger or equal to the lower limit defined by the `DETECTIONS`, the detections within the subgroup are then checked for linear motion by the fitting procedure described above. If any subgroup fails the linear motion test, the source is discarded. If a subgroup has too few detections, it is only discarded if the other subgroup fails the linear motion test or if all other subgroups do not contain the sufficient amount of observations either.
+As long as the number of detections in each subgroup is larger or equal to 3, the detections within the subgroup are then checked for linear motion by the fitting procedure described above. If any subgroup fails the linear motion test, the source is discarded. If a subgroup has fewer than 3 detections, it is only discarded if the other subgroup fails the linear motion test or if all other subgroups do not contain the sufficient amount of observations either.
 
 All source detections which were identified as outliers in epoch space get +1 added to their `FLAGS_SSOS` parameter. If a source contains "only outliers" (e.g. two pairs of two detections with a large gap in between), the source is removed.
 
@@ -165,6 +165,10 @@ SkyBoT Cross-match
 Setting: `CROSSMATCH_SKYBOT`  |  Parameters: `CROSSMATCH_RADIUS`, `OBSERVATORY_CODE`, `FOV_DIMENSIONS`
 
 Query the `SkyBoT <http://vo.imcce.fr/webservices/skybot/?conesearch>`_ database for SSOs in the field-of-view defined by `FOV_DIMENSIONS` and the centre coordinates of each exposure for each observation epoch. The query result is saved as ``skybot/query_string.XML`` file. The positions of all SSO candidates are then compared to the predicted positions of known SSOs, and if a match is found within the `CROSSMATCH_RADIUS` (in arcsecond), the predicted SkyBoT parameters are added to the source metadata in the database.
+
+The SkyBoT matching is performed on a detection-basis: each single source detection is cross-matched and the closest SkyBoT match is saved.
+
+If more than one known SSO is associated with an SSO candidate, the measured and predicted proper motions are compared, and the match with the smallest difference in the proper motion angle is chosen. Source detections with no match will carry the name and designation of the SSO associated with the remaining detections, while the remaining SKYBOT fields will be empty.
 
 The `FOV_DIMENSIONS` parameter has to be defined as described on the SkyBoT webpage, a string of format "YxZ", where Y and Z are the image dimensions (integer or floating value) in degree.
 
