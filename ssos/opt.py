@@ -190,7 +190,7 @@ def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, 
 
     input
     ------
-    sources - pd.DataFrame, table of source data
+    group - pd.DataFrame, table of source data
     target_dir - str, absolute path to SkyBoT folder
     fov - str, value of FOV_DIMENSIONS parameter
     obs_code - str, value of OBSERVATORY_CODE parameter
@@ -251,7 +251,7 @@ def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, 
                                        'ddec': [0],
                                        'class': ['']})
 
-    # Call actual cross-matching method
+    # Call actual cross-matching method on single source detections
     group = group.apply(_cross_match, args=(skybot_sources, crossmatch_radius), axis=1)
 
     return group
@@ -272,14 +272,13 @@ def _cross_match(source, skybot_sources, crossmatch_radius):
         source - pd.Series, single source detection parameters with SkyBot parameters added
     '''
 
-    # Find SkyBoT source that is closest in angular separation to KiDS source  # in degrees
+    # Find SkyBoT source that is closest in angular separation to source
     distances_to_source = abs(np.sqrt((skybot_sources['_raj2000'] - source['ALPHA_J2000'])**2 +\
                                       (skybot_sources['_decj2000'] - source['DELTA_J2000'])**2))
 
-    if min(distances_to_source) < crossmatch_radius:
+    if distances_to_source.min() <= crossmatch_radius:
 
-        skybot_source_index = distances_to_source.argsort()[:1][0]
-        skybot_match = skybot_sources.iloc[np.argmin(distances_to_source)]
+        skybot_match = skybot_sources.iloc[distances_to_source.values.argmin()]
 
         source['SKYBOT_NUMBER']  = skybot_match['num']
         source['SKYBOT_NAME']    = skybot_match['name']
@@ -291,6 +290,22 @@ def _cross_match(source, skybot_sources, crossmatch_radius):
         source['SKYBOT_CLASS']   = skybot_match['class']
 
     return source
+
+
+def _compute_pm_difference_angle(row):
+    # returns the angle between the skybot and source proper motion vectors
+    skybot_pm = np.array([row.SKYBOT_PMALPHA, row.SKYBOT_PMDELTA])
+
+    try:
+        skybot_pm /= np.linalg.norm(skybot_pm)
+
+    except ValueError: # no skybot match
+        return 100.    # should never be the largest angle
+
+    source_pm = np.array([row.PMALPHA_J2000, row.PMDELTA_J2000])
+    source_pm /= np.linalg.norm(source_pm)
+
+    return np.arccos(np.clip(np.dot(source_pm, skybot_pm), -1.0, 1.0))
 
 
 def crossmatch_skybot(sources, settings, log, paths, args):
@@ -328,6 +343,34 @@ def crossmatch_skybot(sources, settings, log, paths, args):
     sources = sources.groupby('DATE-OBS_EXP').apply(_query_and_cross_match, target_dir=target_dir,
                                                     fov=fov, obs_code=obs_code, log=log, args=args,
                                                     crossmatch_radius=crossmatch_radius)
+
+    # For each SSO, check if multiple matches were found
+    # If so, choose the match which is most co-linear with the measured proper motion (minimize the angles)
+    for number, source in sources.groupby('SOURCE_NUMBER'):
+
+        if len(set(source.SKYBOT_NAME)) > 1:
+            # if one of the matches is NaN, remove it and see if there's only one left
+            names = set([name for name in source.SKYBOT_NAME if name != ''])
+
+            if len(names) == 1: # some detections were not matched, add the designation to their columns
+
+                numbers = [numb for numb in source.SKYBOT_NUMBER if numb != '']
+                sources.loc[source.index, 'SKYBOT_NAME'] = list(names)[0]
+                sources.loc[source.index, 'SKYBOT_NUMBER'] = list(numbers)[0]
+
+            else: # compute the best match by minimizing the angular difference in proper motion
+
+                pm_difference = source.apply(_compute_pm_difference_angle, axis=1)
+                best_match = pm_difference.idxmin()
+
+                best_match_name = sources.loc[best_match, 'SKYBOT_NAME']
+                best_match_number = sources.loc[best_match, 'SKYBOT_NUMBER']
+
+                sources.loc[source[source.SKYBOT_NAME != best_match_name].index,
+                                  ['SKYBOT_NAME', 'SKYBOT_NUMBER', 'SKYBOT_MAG',
+                                   'SKYBOT_ALPHA', 'SKYBOT_DELTA', 'SKYBOT_PMALPHA',
+                                   'SKYBOT_PMDELTA', 'SKYBOT_CLASS']] = [best_match_name, best_match_number,
+                                                                         '', '', '', '', '', '']
 
     log.info(' %i matched.\n' % len(set(sources[sources['SKYBOT_NAME']!='']['SOURCE_NUMBER'])))
     return sources

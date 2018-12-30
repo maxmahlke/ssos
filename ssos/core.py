@@ -68,8 +68,8 @@ class Pipeline:
 
         # Little hack for fixed apertuer magnitudes "without" cutout extraction
         if not self.settings['EXTRACT_CUTOUTS'] and self.settings['FIXED_APER_MAGS']:
-            self.log.debug('FIXED_APER_MAGS is True but EXTRACT_CUTOUTS is False. Will\
-                            delete cutouts upon finishing.')
+            self.log.debug('FIXED_APER_MAGS is True but EXTRACT_CUTOUTS is False. Will'\
+                           ' delete cutouts upon finishing.')
             self.paths['cutouts'] = self.paths['tmp']
             self.analysis_steps[0:0] = ['EXTRACT_CUTOUTS']
 
@@ -103,8 +103,8 @@ class Pipeline:
                 set_up = open(os.path.join(os.path.dirname(__file__),
                                            'pipeline_settings.ssos'))
             except IOError:
-                raise PipelineSettingsException('No configuration file provided\
-                       and not found in package directory.')
+                raise PipelineSettingsException('No configuration file provided '\
+                       'and none found in package directory.')
 
         with set_up:
             for line in set_up:
@@ -164,8 +164,8 @@ class Pipeline:
                     _ = header[self.settings[kw]]
 
                 except KeyError:
-                    raise PipelineSettingsException('Could not find keyword %s in FITS header.\
-                                                     Is the SCI_EXTENSION correct?' % self.settings[kw])
+                    raise PipelineSettingsException('Could not find keyword %s in FITS header.'\
+                                                    ' Is the SCI_EXTENSION correct?' % self.settings[kw])
 
 
         # Check that config files exist

@@ -166,7 +166,7 @@ def linear_motion(sources, settings):
                                settings['IDENTIFY_OUTLIER']
 
      # Lower limit of subgroup size
-    min_detections = max(settings['DETECTIONS'])
+    min_detections = 3
 
     sources_to_remove = []
 
@@ -198,7 +198,7 @@ def linear_motion(sources, settings):
 
             for subgroup in subgroups:
 
-                if len(subgroup) <= min_detections: # if there aren't sufficient detections
+                if len(subgroup) < min_detections: # if there aren't sufficient detections
                     sources.loc[subgroup.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
 
                 else:
