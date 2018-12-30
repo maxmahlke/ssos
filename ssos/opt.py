@@ -113,7 +113,7 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
                             (sources.CATALOG_NUMBER == reference_detection.CATALOG_NUMBER), 'FLAGS_SSOS'] += 2
                 break
         else:
-            from core import PipelineSettingsException
+            from ssos.core import PipelineSettingsException
             raise PipelineSettingsException('No detection of candidate %i found in reference filter %s.'\
                                             % (number, reference_filter))
 
@@ -125,7 +125,7 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
         # Call SExtractor in dual image mode
         for image in cutouts:
 
-            if number not in image:
+            if str(number) not in image:
                 continue
 
             cat = os.path.join(paths['cutouts'], os.path.basename(image.replace('.fits', '.cat')))

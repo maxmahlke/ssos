@@ -156,17 +156,23 @@ class Pipeline:
             except ValueError:
                 raise PipelineSettingsException('%s value invalid' % param)
 
-        # Check image header keywords
+        # Check primary and science image header keywords
         with fits.open(self.images[0]) as exposure:
-            header = exposure[self.settings['SCI_EXTENSION'][0]].header
-            for kw in ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']:
+
+            self.primary_header = exposure[0].header
+            self.science_header = exposure[self.settings['SCI_EXTENSION'][0]].header
+
+            kws = ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']
+
+            for kw in kws:
                 try:
-                    _ = header[self.settings[kw]]
-
+                    _ = self.primary_header[self.settings[kw]]
                 except KeyError:
-                    raise PipelineSettingsException('Could not find keyword %s in FITS header.'\
-                                                    ' Is the SCI_EXTENSION correct?' % self.settings[kw])
-
+                    try:
+                        _ = self.science_header[self.settings[kw]]
+                    except KeyError:
+                        raise PipelineSettingsException('Could not find keyword %s in FITS header.'\
+                                                        ' Is the SCI_EXTENSION correct?' % self.settings[kw])
 
         # Check that config files exist
         for file in ['SEX_CONFIG', 'SEX_PARAMS', 'SEX_NNW', 'SEX_FILTER',
@@ -224,16 +230,18 @@ class Pipeline:
 
     def _print_field_info(self):
         ''' Prints RA, DEC, and OBJECT keywords to log '''
-        with fits.open(self.images[0]) as exposure:
-            header = exposure[self.settings['SCI_EXTENSION'][0]].header
-            ra = header[self.settings['RA']]
-            dec = header[self.settings['DEC']]
-            object_ = header[self.settings['OBJECT']]
+        kws = {}
+        for kw in ['OBJECT', 'RA', 'DEC']:
 
-        ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
+            try:
+                kws[kw] = self.primary_header[self.settings[kw]]
+            except KeyError:
+                kws[kw] = self.science_header[self.settings[kw]]
+
+        ecli_lat = SkyCoord(kws['RA'], kws['DEC'], frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
 
         self.log.info('\t|\t'.join(['%i Exposures' % len(self.images),
-                                    '%s' % object_,
+                                    '%s' % kws['OBJECT'],
                                     '%.2fdeg Ecliptic Latitude\n\n' % ecli_lat]))
 
 
@@ -259,7 +267,10 @@ class Pipeline:
         if not self.args.sex and os.path.isfile(cat):
             self.log.debug('SExtractor catalog %s already exists! Skipping this sextraction..\n' % cat)
             with fits.open(image) as exposure:
-                date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+                try:
+                    date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+                except KeyError: # check primary header
+                    date_obs = exposure[0].header[self.settings['DATE-OBS']]
             return cat, date_obs
 
         sex_args = {
@@ -296,7 +307,11 @@ class Pipeline:
         with fits.open(image) as exposure:
             # Make .ahead file with the EPOCH in MJD for SCAMP
             # Following http://www.astromatic.net/forum/showthread.php?tid=501
-            date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+            try:
+                date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+            except KeyError: # check primary header
+                date_obs = exposure[0].header[self.settings['DATE-OBS']]
+
             mjd = Time(date_obs, format='isot').mjd
 
             with open(os.path.splitext(cat)[0] + '.ahead', 'w+') as file:
@@ -370,8 +385,6 @@ class Pipeline:
                 cmd += ' '.join([' -' + param, value])
 
             self.log.debug('\nExecuting SCAMP command:\n%s\n' % cmd)
-            if self.log.level > 10:  # Shown SCAMP output only when debugging
-                    cmd += ' >/dev/null 2>&1'
             os.system(cmd)
 
         # Add the SCAMP catalog numbers to the SExtactor catalogs dictionary
