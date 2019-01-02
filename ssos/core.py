@@ -520,9 +520,9 @@ class Pipeline:
                         sources.loc[index, prop] = cat[2].data.field(prop + '_AUTO')[index_in_sex_cat]
 
                 # Add the image filename and science extension
-                image_filename = os.path.splitext(
-                                 os.path.basename(self.SExtractor_catalogues[cat_number]))[0][:-2]\
-                                 + '.fits'  # [:-3] removes the extension suffix
+                image_filename = '_'.join(os.path.splitext(
+                                             self.SExtractor_catalogues[cat_number]
+                                                          )[0].split('_')[:-1]) + '.fits'
 
                 sci_ext = int(os.path.splitext(self.SExtractor_catalogues[cat_number])[0][-1])
 
