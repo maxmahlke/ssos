@@ -521,10 +521,10 @@ class Pipeline:
 
                 # Add the image filename and science extension
                 image_filename = '_'.join(os.path.splitext(
-                                             self.SExtractor_catalogues[cat_number]
+                                             os.path.basename(self.SExtractor_catalogues[cat_number])
                                                           )[0].split('_')[:-1]) + '.fits'
 
-                sci_ext = int(os.path.splitext(self.SExtractor_catalogues[cat_number])[0][-1])
+                sci_ext = int(os.path.splitext(self.SExtractor_catalogues[cat_number])[0].split('_')[-1])
 
                 sources.loc[group.index, 'FILENAME_EXP'] = image_filename
                 sources.loc[group.index, 'SCI_EXTENSION'] = sci_ext
@@ -532,7 +532,10 @@ class Pipeline:
                 # Add exposure keywords
                 with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
                     for prop in ['OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME', 'RA', 'DEC']:
-                        sources.loc[group.index, prop + '_EXP']   = exposure[sci_ext].header[self.settings[prop]]
+                        try:
+                            sources.loc[group.index, prop + '_EXP']   = exposure[sci_ext].header[self.settings[prop]]
+                        except KeyError: # check primary header
+                            sources.loc[group.index, prop + '_EXP']   = exposure[0].header[self.settings[prop]]
 
         sources['MID_EXP_MJD'] = sources.apply(lambda x: (Time(x['DATE-OBS_EXP'], format='isot') +
                                                float(x['EXPTIME_EXP']) / 2 * u.second).mjd, axis=1)
