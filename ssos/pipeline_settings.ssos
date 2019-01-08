@@ -1,7 +1,7 @@
 # ------
 # Image Parameters
 
-SCI_EXTENSION        0                       # Science Extension of FITS file
+SCI_EXTENSION        All                       # Science Extension of FITS file
 WEIGHT_IMAGES        False                   # Absolute path to weight images for SExtractor run
 RA                   RA                      # Header keyword of right ascension in degree
 DEC                  DEC                     # Header keyword of declination in degree

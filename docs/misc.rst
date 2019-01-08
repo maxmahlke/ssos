@@ -23,6 +23,8 @@ SCAMP
 
 * If SCAMP gets stuck on the *Astrometric Matching* step, it may be because of problematic input image headers. Apparently, `SCAMP does not like zenithal/azimuthal polynomial (ZPN) projections <https://www.astromatic.net/forum/showthread.php?tid=319>`_. Changing the `CTYPEx keywords to RA---ZPN or DEC--ZPN respectively (notice that both have to be 8 characters long) may help. Also watch out for subsequent warnings in SExtractor runs, specifically *Significant inaccuracy likely to occur in projection*. Refer to the section above for possible solutions.
 
+* When passing multi-extension FITS files to SCAMP, the auxilliary header files `.ahead` need to mirror this format as well. Each keyword has to be repeated on a new line for each header, and these additional headers have to be terminated by `END` cards.
+
 
 Pipeline
 =============

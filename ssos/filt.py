@@ -136,7 +136,8 @@ def motion_is_linear(epoch, dim, dimerr, r_squared):
     sigma = dimerr.values
 
     try:
-        popt, pcov = curve_fit(linear_function, epoch, coords, sigma=sigma, absolute_sigma=True)
+        popt, pcov = curve_fit(linear_function, epoch, coords, sigma=sigma,
+                               p0=[0, 100], absolute_sigma=True)
     except RuntimeError:
         return False # If fit does not converge, discard this source
 

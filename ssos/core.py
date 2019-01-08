@@ -154,13 +154,23 @@ class Pipeline:
             try:
                 settings[param] = [int(character) for character in settings[param].split(',')]
             except ValueError:
-                raise PipelineSettingsException('%s value invalid' % param)
+                if param == 'SCI_EXTENSION' and settings[param] == 'All':
+                    settings[param] = False # treat it as 'None provided'
+                else:
+                    raise PipelineSettingsException('%s value invalid' % param)
 
         # Check primary and science image header keywords
         with fits.open(self.images[0]) as exposure:
 
             self.primary_header = exposure[0].header
-            self.science_header = exposure[self.settings['SCI_EXTENSION'][0]].header
+
+            if not settings['SCI_EXTENSION']:
+                try:
+                    self.science_header = exposure[1].header # use first extension
+                except IndexError:
+                    self.science_header = exposure[0].header # image data in primary HDU
+            else:
+                self.science_header = exposure[self.settings['SCI_EXTENSION'][0]].header
 
             kws = ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']
 
@@ -262,7 +272,17 @@ class Pipeline:
 
         # Name of output catalog
         cat = os.path.join(self.paths['cats'],
-                           os.path.splitext(os.path.basename(image))[0]) + '_%i.cat' % extension
+                           os.path.splitext(os.path.basename(image))[0])
+
+        # Select extension or run whole image
+        if extension is not False:
+            image_ext = image + '[%i]' % extension
+            cat += '_%i.cat' % extension
+
+        else:
+            image_ext = image
+            cat += '.cat'
+            extension = 1
 
         if not self.args.sex and os.path.isfile(cat):
             self.log.debug('SExtractor catalog %s already exists! Skipping this sextraction..\n' % cat)
@@ -273,9 +293,11 @@ class Pipeline:
                     date_obs = exposure[0].header[self.settings['DATE-OBS']]
             return cat, date_obs
 
+
+
         sex_args = {
 
-            'file': image + '[%i]' % extension,
+            'file': image_ext,
             'config': self.settings['SEX_CONFIG'],
             'overwrite_params': { # Arguments to initialize Astromatic class
                     'CATALOG_NAME': cat,
@@ -287,9 +309,15 @@ class Pipeline:
 
         if self.settings['WEIGHT_IMAGES']:
             sex_args['overwrite_params']['WEIGHT_IMAGE'] = 'MAP_WEIGHT'
+
+            if extension is not False:
+                weight_suffix = '_%i.weight' % extension
+            else:
+                weight_suffix = '.weight'
+
             sex_args['overwrite_params']['WEIGHT_IMAGE'] = os.path.join(self.settings['WEIGHT_IMAGES'],
                                                            os.path.basename(image).replace(
-                                                           '.fits', '_%i.weight' % extension))
+                                                           '.fits', weight_suffix))
 
         if self.log.level <= 10:  # if we're at DEBUG log level, print SExtractor output
             sex_args['overwrite_params']['VERBOSE_TYPE'] = 'NORMAL'
@@ -315,7 +343,9 @@ class Pipeline:
             mjd = Time(date_obs, format='isot').mjd
 
             with open(os.path.splitext(cat)[0] + '.ahead', 'w+') as file:
-                file.write('MJD-OBS = %.6f' % mjd)
+
+                for hdu in exposure:
+                    file.write('MJD-OBS = %.6f\nEND\n' % mjd)
 
         return cat, date_obs
 
@@ -334,8 +364,15 @@ class Pipeline:
 
         for image in self.images:
 
-            for extension in self.settings['SCI_EXTENSION']:
-                cat, date_obs = self._run_SExtractor_on_single_image(image, extension)
+            if self.settings['SCI_EXTENSION']:
+
+                for extension in self.settings['SCI_EXTENSION']:
+                    cat, date_obs = self._run_SExtractor_on_single_image(image, extension)
+                    observation_epochs.append(date_obs)
+                    self.SExtractor_catalogues.append(cat)
+
+            else:
+                cat, date_obs = self._run_SExtractor_on_single_image(image, False)
                 observation_epochs.append(date_obs)
                 self.SExtractor_catalogues.append(cat)
 
@@ -502,32 +539,42 @@ class Pipeline:
 
         sources = self.sources
 
-        for cat_number, group in sources.groupby('CATALOG_NUMBER'):
+        for cat_ext, group in sources.groupby(['CATALOG_NUMBER', 'EXTENSION']):
+
+            cat_number, ext_number = cat_ext
+            ext_number *= 2 # extensions are HEADER and DATA
 
             with fits.open(self.SExtractor_catalogues[cat_number]) as cat:
-                xwin_img = Series(cat[2].data.field('XWIN_IMAGE')) # SExtractor X pixel coordinates
+
+                xwin_img = Series(cat[ext_number].data.field('XWIN_IMAGE')) # SExtractor X pixel coordinates
 
                 for index, source in group.iterrows():
                     index_in_sex_cat = xwin_img[xwin_img == source['X_IMAGE']].index[0]
-
                     for prop in ['AWIN_IMAGE', 'BWIN_IMAGE', 'THETAWIN_IMAGE',
                                  'XWIN_IMAGE', 'YWIN_IMAGE',
                                  'ERRAWIN_IMAGE', 'ERRBWIN_IMAGE', 'ERRTHETAWIN_IMAGE']:
-                        sources.loc[index, prop] = cat[2].data.field(prop)[index_in_sex_cat]
+                        sources.loc[index, prop] = cat[ext_number].data.field(prop)[index_in_sex_cat]
 
                     # Replace SCAMP magnitudes with the SExtractor ones
                     for prop in ['MAG', 'MAGERR', 'FLUX', 'FLUXERR']:
-                        sources.loc[index, prop] = cat[2].data.field(prop + '_AUTO')[index_in_sex_cat]
+                        sources.loc[index, prop] = cat[ext_number].data.field(prop + '_AUTO')[index_in_sex_cat]
 
                 # Add the image filename and science extension
-                image_filename = '_'.join(os.path.splitext(
-                                             os.path.basename(self.SExtractor_catalogues[cat_number])
-                                                          )[0].split('_')[:-1]) + '.fits'
+                if self.settings['SCI_EXTENSION']:
+                    image_filename = '_'.join(os.path.splitext(
+                                                 os.path.basename(self.SExtractor_catalogues[cat_number])
+                                                              )[0].split('_')[:-1]) + '.fits'
+                else:
+                    image_filename = os.path.basename(self.SExtractor_catalogues[cat_number]).replace('.cat', '.fits')
 
-                sci_ext = int(os.path.splitext(self.SExtractor_catalogues[cat_number])[0].split('_')[-1])
+                if self.settings['SCI_EXTENSION']: # set value written to output table
+                    sci_ext = int(os.path.splitext(self.SExtractor_catalogues[cat_number])[0].split('_')[-1])
+                    sources.loc[group.index, 'EXTENSION'] = sci_ext
+
+                else: # set lookup index
+                    sci_ext = 1
 
                 sources.loc[group.index, 'FILENAME_EXP'] = image_filename
-                sources.loc[group.index, 'SCI_EXTENSION'] = sci_ext
 
                 # Add exposure keywords
                 with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
@@ -559,7 +606,7 @@ class Pipeline:
     def save_and_cleanup(self):
         ''' Clean up the final database.  Rename columns, remove unnecessary columns. '''
 
-        self.sources.drop(columns=['EXTENSION', 'ASTR_INSTRUM', 'PHOT_INSTRUM'], inplace=True)
+        self.sources.drop(columns=['ASTR_INSTRUM', 'PHOT_INSTRUM'], inplace=True)
 
         self.sources.rename(index=str, columns={'ALPHA_J2000': 'RA', 'DELTA_J2000': 'DEC', 'PMALPHA_J2000': 'PMRA',
                                                 'PMALPHAERR_J2000': 'PMRA_ERR', 'PMDELTA_J2000': 'PMDEC',
@@ -571,7 +618,7 @@ class Pipeline:
         ordered_columns = ['SOURCE_NUMBER', 'CATALOG_NUMBER', 'RA', 'DEC', 'EPOCH', 'MAG', 'MAGERR', 'FLUX', 'FLUXERR',
                            'PM', 'PMERR', 'PMRA',  'PMRA_ERR', 'PMDEC', 'PMDEC_ERR', 'MID_EXP_MJD', 'DATE-OBS_EXP',
                            'EXPTIME_EXP', 'OBJECT_EXP', 'FILTER_EXP', 'RA_EXP', 'DEC_EXP', 'FILENAME_EXP',
-                           'SCI_EXTENSION', 'XWIN_IMAGE', 'YWIN_IMAGE', 'AWIN_IMAGE', 'ERRAWIN_IMAGE', 'BWIN_IMAGE',
+                           'EXTENSION', 'XWIN_IMAGE', 'YWIN_IMAGE', 'AWIN_IMAGE', 'ERRAWIN_IMAGE', 'BWIN_IMAGE',
                            'ERRBWIN_IMAGE', 'THETAWIN_IMAGE', 'ERRTHETAWIN_IMAGE', 'ERRA_WORLD', 'ERRB_WORLD',
                            'ERRTHETA_WORLD', 'FLAGS_EXTRACTION', 'FLAGS_SCAMP', 'FLAGS_IMA', 'FLAGS_SSOS']
 

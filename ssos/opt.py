@@ -41,7 +41,8 @@ def extract_cutouts(sources, settings, log, paths, args):
 
     for index, row in sources.iterrows():
 
-        image_file = os.path.join(image_dir, row['FILENAME_EXP']) + '[%i]' % row['SCI_EXTENSION']
+        image_file = os.path.join(image_dir, row['FILENAME_EXP']) + '[%i]' % row['EXTENSION']
+
         cutout_filename = os.path.join(cutout_dir, '{:.0f}_{:.0f}.fits'.format(row['SOURCE_NUMBER'],
                                                                                row['CATALOG_NUMBER']))
 
