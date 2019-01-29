@@ -25,8 +25,7 @@ FILTER_STEPS = {
         'FILTER_MOTION':       filt.linear_motion,
         'FILTER_PIXEL':        filt.pixel,
         'FILTER_TRAIL':        filt.constant_trail,
-        'FILTER_T_DIST':       filt.trail_distribution,
-        'FILTER_STAR_REGIONS': filt.star_catalog
+        'FILTER_BRIGHT_SOURCES': filt.bright_sources_catalog
         }
 
 
@@ -94,14 +93,14 @@ class Pipeline:
             if self.args.set_up:
                 set_up = open(self.args.set_up[0], 'r')
             else:
-                set_up = open('pipeline_settings.ssos', 'r')
+                set_up = open('default.ssos', 'r')
 
         except IOError:
             self.log.debug('No config file provided in CWD or via -c flag.\
                             Using default settings.\n')
             try:
                 set_up = open(os.path.join(os.path.dirname(__file__),
-                                           'pipeline_settings.ssos'))
+                                           'default.ssos'))
             except IOError:
                 raise PipelineSettingsException('No configuration file provided '\
                        'and none found in package directory.')
@@ -186,7 +185,7 @@ class Pipeline:
 
         # Check that config files exist
         for file in ['SEX_CONFIG', 'SEX_PARAMS', 'SEX_NNW', 'SEX_FILTER',
-                     'SCAMP_CONFIG', 'SWARP_CONFIG', 'HYGCAT']:
+                     'SCAMP_CONFIG', 'SWARP_CONFIG']:
             if not os.path.isfile(settings[file]):
                 raise PipelineSettingsException('Could not find %s in %s' %
                                                 (file, settings[file]) )
@@ -201,8 +200,8 @@ class Pipeline:
 
         # Convert filter strings to booleans
         for param in ['FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
-                      'IDENTIFY_OUTLIER', 'FILTER_TRAIL', 'FILTER_T_DIST',
-                      'FILTER_STAR_REGIONS', 'CROSSMATCH_SKYBOT', 'EXTRACT_CUTOUTS',
+                      'IDENTIFY_OUTLIER', 'FILTER_TRAIL',
+                      'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT', 'EXTRACT_CUTOUTS',
                       'FIXED_APER_MAGS']:
 
             if settings[param].upper() == 'TRUE':
@@ -221,7 +220,7 @@ class Pipeline:
 
         # Convert numeric values to float
         for param in ['PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL', 'OUTLIER_THRESHOLD',
-                      'R_SQU_M', 'RATIO', 'SIGMA', 'DISTANCE', 'CROSSMATCH_RADIUS',
+                      'R_SQU_M', 'RATIO', 'DISTANCE', 'CROSSMATCH_RADIUS',
                       'CUTOUT_SIZE']:
 
             try:
@@ -235,6 +234,21 @@ class Pipeline:
                 except AssertionError:
                     raise PipelineSettingsException('The %s parameter has to be in range [0 - 1]'
                                                      % param)
+        if settings['FILTER_BRIGHT_SOURCES']:
+            # Evaluate bright-sources catalogue path
+            if settings['BRIGHT_SOURCES_CAT'] == 'REFCAT':
+                # get the filename and column names from the scamp config file
+                with open(settings['SCAMP_CONFIG'], 'r') as file:
+                    for line in file:
+                        if 'REFOUT_CATPATH' in line:
+                            refout_catpath = line.split()[1]
+                        if 'ASTREF_CATALOG' in line:
+                            astref_catalog = line.split()[1]
+                if self.args.ASTREF_CATALOG: # if overwritten via command line
+                    astref_catalog = self.args.ASTREF_CATALOG
+
+                settings['BRIGHT_SOURCES_CAT'] = [refout_catpath, astref_catalog]
+
         return settings
 
 
@@ -278,17 +292,18 @@ class Pipeline:
         if extension is not False:
             image_ext = image + '[%i]' % extension
             cat += '_%i.cat' % extension
+            sci_extension = extension
 
         else:
             image_ext = image
             cat += '.cat'
-            extension = 1
+            sci_extension = 1
 
         if not self.args.sex and os.path.isfile(cat):
             self.log.debug('SExtractor catalog %s already exists! Skipping this sextraction..\n' % cat)
             with fits.open(image) as exposure:
                 try:
-                    date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+                    date_obs = exposure[sci_extension].header[self.settings['DATE-OBS']]
                 except KeyError: # check primary header
                     date_obs = exposure[0].header[self.settings['DATE-OBS']]
             return cat, date_obs
@@ -311,6 +326,7 @@ class Pipeline:
             sex_args['overwrite_params']['WEIGHT_IMAGE'] = 'MAP_WEIGHT'
 
             if extension is not False:
+                print(extension)
                 weight_suffix = '_%i.weight' % extension
             else:
                 weight_suffix = '.weight'
@@ -336,7 +352,7 @@ class Pipeline:
             # Make .ahead file with the EPOCH in MJD for SCAMP
             # Following http://www.astromatic.net/forum/showthread.php?tid=501
             try:
-                date_obs = exposure[extension].header[self.settings['DATE-OBS']]
+                date_obs = exposure[sci_extension].header[self.settings['DATE-OBS']]
             except KeyError: # check primary header
                 date_obs = exposure[0].header[self.settings['DATE-OBS']]
 
@@ -404,6 +420,10 @@ class Pipeline:
 
         if self.args.ASTREF_CATALOG is not None:
             scamp_args['overwrite_params']['ASTREF_CATALOG'] = self.args.ASTREF_CATALOG
+
+        if self.settings['FILTER_BRIGHT_SOURCES'] and \
+           self.settings['BRIGHT_SOURCES_CAT'] == 'REFCAT':
+            scamp_args['overwrite_params']['SAVE_REFCATALOG'] = 'Y'
 
         if self.args.CROSSID_RADIUS is not None:
             scamp_args['overwrite_params']['CROSSID_RADIUS'] = str(self.args.CROSSID_RADIUS)

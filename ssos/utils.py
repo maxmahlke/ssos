@@ -47,7 +47,7 @@ def init_argparse():
     group = parser.add_argument_group('Filter Settings')
 
     for prop in ['FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION', 'IDENTIFY_OUTLIER',
-                 'FILTER_TRAIL', 'FILTER_T_DIST', 'FILTER_STAR_REGIONS', 'CROSSMATCH_SKYBOT',
+                 'FILTER_TRAIL', 'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT',
                  'EXTRACT_CUTOUTS', 'FIXED_APER_MAGS']:
 
         group.add_argument('-'+prop, metavar='bool', action='store',
@@ -58,7 +58,7 @@ def init_argparse():
     for val in ['SCI_EXTENSION', 'WEIGHT_IMAGES', 'RA', 'DEC', 'OBJECT', 'DATE_OBS', 'FILTER', 'EXPTIME',
                 'SEX_CONFIG', 'SEX_PARAMS', 'SEX_FILTER', 'SEX_NNW', 'SCAMP_CONFIG', 'ASTREF_CATALOG',
                 'CROSSID_RADIUS', 'SWARP_CONFIG', 'DETECTIONS', 'PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL',
-                'OUTLIER_THRESHOLD', 'R_SQU_M', 'RATIO', 'SIGMA', 'DISTANCE', 'HYGCAT', 'CROSSMATCH_RADIUS',
+                'OUTLIER_THRESHOLD', 'R_SQU_M', 'RATIO', 'BRIGHT_SOURCES_CAT', 'DISTANCE', 'MAG_LIMITS', 'CROSSMATCH_RADIUS',
                 'CUTOUT_SIZE', 'REFERENCE_FILTER', 'OBSERVATORY_CODE', 'FOV_DIMENSIONS']:
 
         group.add_argument('-'+val, metavar='value', action='store',

@@ -1,0 +1,7 @@
+1.1.10
+---
+* The SCAMP reference catalogue can now be used in the FILTER_STAR_REGIONS step, with an optional limit on the magnitude of the reference sources. Consequently, the FILTER_STAR_REGIONS step is renamed to FILTER_BRIGHT_SOURCES
+* SSOs can exhibit constant apparent motion in declination. This scenario is now accounted for in the linear motion routine by transforming the equatorial to ecliptic coordinates and repeating the weighted linear fits in ecliptic longitude and latitude space
+* Changed linear filter routine from scipy.optimize.curve_fit to statsmodels.api.WLS
+* Changed the proper motion limits from exclusive to inclusive
+* pipeline_settings.ssos is now default.ssos, analogous to astrOmatic software approach

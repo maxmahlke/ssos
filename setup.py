@@ -7,7 +7,7 @@ with open('README.md', 'r') as rm:
 
 setup(
     name = 'ssos',
-    version = '1.1.9',
+    version = '1.1.10',
     description = 'The ssos Pipeline - Identiciation of Solar System Objects in imaging surveys',
     url = 'https://github.com/maxmahlke/ssos',
     author = 'Max Mahlke',
@@ -15,20 +15,20 @@ setup(
     long_description = long_description,
     long_description_content_type = 'text/markdown',
     packages=find_packages(exclude = ['contrib', 'docs', 'tests']),
-    keywords = ['astronomy astrophysics solar system data pipeline'],
+    keywords = ['astronomy astrophysics solar-system data pipeline'],
     setup_requires = [
                       'astropy',
                       'pandas',
                       'numpy',
                       'scipy',
-                      'statsmodels'
+                      'statsmodels>=0.9.0'
                       ],
     install_requires = [
                         'astropy',
                         'pandas',
                         'numpy',
                         'scipy',
-                        'statsmodels'
+                        'statsmodels>=0.9.0'
                         ],
     entry_points = {
                     'console_scripts': ['ssos = ssos.__main__:main']

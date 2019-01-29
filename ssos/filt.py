@@ -1,16 +1,20 @@
 '''
-    Python implementations of filter functions to detect SSOs in SExtractor and SCAMP catalogs.
+    Python implementations of filter functions to detect SSOs in SExtractor and SCAMP catalogues
 
-    Part of the SSO recovery pipeline.
+    Part of the ssos pipeline.
 '''
 
 import collections
+import os
 
+from astropy.io import fits
+from astropy.coordinates import SkyCoord
+from astropy.table import Table
 import numpy as np
 import pandas as pd
 from statsmodels import robust
-from scipy import stats
-from scipy.optimize import curve_fit
+import statsmodels.api as sm
+
 
 
 def detections(sources, settings):
@@ -47,16 +51,15 @@ def proper_motion(sources, settings):
     ------
     sources - pandas dataframe, sources data without the sources filtered in this step
     '''
-
     pm_low = settings['PM_LOW']
     pm_up = settings['PM_UP']
     SN = settings['PM_SNR']
 
     # Filter sources for proper motion range
-    sources = sources[(sources.PM > pm_low) & (sources.PM < pm_up)]
+    sources = sources[(sources.PM >= pm_low) & (sources.PM <= pm_up)]
 
     # Filter by proper motion SN
-    sources = sources[sources.PM / sources.PMERR > SN]
+    sources = sources[sources.PM / sources.PMERR >= SN]
     return sources
 
 
@@ -73,7 +76,6 @@ def pixel(sources, settings):
     ------
     sources - pandas dataframe, sources data without the sources filtered in this step
     '''
-
     delta_pixel = settings['DELTA_PIXEL']
 
     # For all sources, check if the largest XWIN_IMAGE !and! YWIN_IMAGE differences
@@ -90,33 +92,7 @@ def pixel(sources, settings):
     return sources
 
 
-def calc_r_squared(y_fit, y_data):
-    '''
-    Calculates the r-squared fit parameter to verify the linear motion
-
-    input
-    ------
-    y_fit - list, values of fit function
-    y_data - list, data points
-
-    return
-    ------
-    r_squared - float, between 0 and 1
-    '''
-
-    residuals = y_data - y_fit
-    ss_res = np.sum(residuals**2)
-    ss_tot = np.sum((y_data-np.mean(y_data))**2)
-
-    r_squared = 1 - (ss_res / ss_tot)
-    return r_squared
-
-
-def linear_function(x, m, n):
-    return x*m + n
-
-
-def motion_is_linear(epoch, dim, dimerr, r_squared):
+def motion_is_linear(epoch, coords, sigma, r_squared):
     '''
     Motion fitting function
 
@@ -131,22 +107,25 @@ def motion_is_linear(epoch, dim, dimerr, r_squared):
     ------
     True if motion is linear else False
     '''
+    epoch = sm.add_constant(epoch)
+    model = sm.WLS(coords, epoch, weights=1/sigma**2)
+    results = model.fit()
 
-    coords = dim.values
-    sigma = dimerr.values
-
-    try:
-        popt, pcov = curve_fit(linear_function, epoch, coords, sigma=sigma,
-                               p0=[0, 100], absolute_sigma=True)
-    except RuntimeError:
-        return False # If fit does not converge, discard this source
-
-    fitted_r_squared = calc_r_squared(linear_function(epoch, *popt), coords)
-
-    if fitted_r_squared >= r_squared:
+    if results.rsquared >= r_squared:
         return True
     else:
         return False
+
+def motion_is_linear_in_ecliptic_coordinates(epoch, ra, dec, r_squ):
+    # Transform to ecliptic coordinate system
+    ecliptic_coords = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic
+    if not motion_is_linear(epoch, ecliptic_coords.lon.deg, 1, r_squ):
+        return False
+    else:
+        if not motion_is_linear(epoch, ecliptic_coords.lat.deg, 1, r_squ):
+            return False
+        else:
+            return True
 
 
 def linear_motion(sources, settings):
@@ -174,21 +153,26 @@ def linear_motion(sources, settings):
     for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
         # GROUP contains the detections of a single source
         epoch = group['EPOCH'].values
+        ra = group['ALPHA_J2000'].values
+        dec = group['DELTA_J2000'].values
 
         if id_out:
             # Detect outliers using the Median Absolute Deviation of the EPOCHS
             outlier_index = np.where(abs(np.diff(epoch)) > robust.mad(epoch) *
                                                            out_thres)[0]
-            if len(outlier_index)  == 0:  # no outlier in EPOCH. Check edges
-                outlier_in_middle =  np.where(abs(np.diff(epoch[:-1])) > robust.mad(epoch[:-1]) *
+            if len(outlier_index) == 0:  # no outlier in EPOCH. Check edges
+                outlier_in_middle = np.where(abs(np.diff(epoch[:-1])) > robust.mad(epoch[:-1]) *
                                                                          out_thres)[0]
                 if len(outlier_in_middle) == 0:
-                    for dim, dimerr in [(group['ALPHA_J2000'], group['ERRA_WORLD']),
-                                        (group['DELTA_J2000'], group['ERRB_WORLD'])]:
-                        if not motion_is_linear(epoch, dim, dimerr, r_squ):
-                            sources_to_remove.append(source_number)
-                            break
-                    continue
+                    # Linear in right ascencsion?
+                    if not motion_is_linear(epoch, ra, group['ERRA_WORLD'].values, r_squ):
+                        sources_to_remove.append(source_number)
+                    else: # Linear motion in right ascension
+                        # Linear motion in declination?
+                        if not motion_is_linear(epoch, dec, group['ERRB_WORLD'].values, r_squ):
+                            if not motion_is_linear_in_ecliptic_coordinates(epoch, ra, dec, r_squ):
+                                sources_to_remove.append(source_number)
+                    continue # source has linear motion and is kept
 
                 else: # outlier found in middle (jump in epochs)
                     outlier_index = outlier_in_middle
@@ -203,23 +187,33 @@ def linear_motion(sources, settings):
                     sources.loc[subgroup.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
 
                 else:
-                    epochs = subgroup['EPOCH']
-                    for dim, dimerr in [(subgroup['ALPHA_J2000'], subgroup['ERRA_WORLD']),
-                                        (subgroup['DELTA_J2000'], subgroup['ERRB_WORLD'])]:
-                        if not motion_is_linear(epochs, dim, dimerr, r_squ):
-                            sources.loc[subgroup.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
-                            break
+                    epoch = subgroup['EPOCH'].values
+                    ra = subgroup['ALPHA_J2000'].values
+                    dec = subgroup['DELTA_J2000'].values
+                    # Linear in right ascencsion?
+                    if not motion_is_linear(epoch, ra, subgroup['ERRA_WORLD'].values, r_squ):
+                        sources.loc[subgroup.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
+                    else: # Linear motion in right ascension
+                        # Linear motion in declination?
+                        if not motion_is_linear(epoch, dec, subgroup['ERRB_WORLD'].values, r_squ):
+                            if not motion_is_linear_in_ecliptic_coordinates(epoch, ra, dec, r_squ):
+                                sources.loc[subgroup.index, 'FLAGS_SSOS'] +=1  # Add outlier flag
 
             # FLAG_SSOS is only uneven if detection is outlier
+            # If all source detections were flagged, remove the source
             if all(sources[sources.SOURCE_NUMBER == source_number]['FLAGS_SSOS'] % 2 == 1):
                 sources_to_remove.append(source_number)
 
         else:
-            for dim, dimerr in [(group['ALPHA_J2000'], group['ERRA_WORLD']),
-                                (group['DELTA_J2000'], group['ERRB_WORLD'])]:
-                if not motion_is_linear(epoch, dim, dimerr, r_squ):
-                    sources_to_remove.append(source_number)
-                    break
+            # Linear in right ascencsion?
+            if not motion_is_linear(epoch, ra, group['ERRA_WORLD'].values, r_squ):
+                sources_to_remove.append(source_number)
+
+            else: # Linear motion in right ascension
+                # Linear motion in declination?
+                if not motion_is_linear(epoch, dec, group['ERRB_WORLD'].values, r_squ):
+                    if not motion_is_linear_in_ecliptic_coordinates(epoch, ra, dec, r_squ):
+                        sources_to_remove.append(source_number)
 
     sources = sources[~sources.SOURCE_NUMBER.isin(sources_to_remove)]
     return sources
@@ -227,7 +221,6 @@ def linear_motion(sources, settings):
 
 def compare_std_and_sigma_of_average(y, sigma):
     ''' Compares weighted average uncertainty to standard deviation '''
-
     weights = 1 / sigma**2
     weighted_average_uncertainty = 1 / np.sqrt(np.sum(weights))
     standard_deviation_of_data = np.std(y)
@@ -273,42 +266,7 @@ def constant_trail(sources, settings):
     return sources
 
 
-def trail_distribution(sources, settings):
-    '''
-
-    ####
-    DEPRECTATED - Use the stellar catalogue filter instead.
-    ####
-
-    Remove sources based on distribution of size parameters
-
-    input
-    ------
-    sources - pandas dataframe, table of source data
-    settings - dict, 'parameter': value
-
-    return
-    ------
-    sources - pandas dataframe, sources data without the sources filtered in this step
-    '''
-
-    sigma = settings['SIGMA']
-    a = sources['AWIN_IMAGE']
-    b = sources['BWIN_IMAGE']
-    mu_a, std_a = np.mean(a), np.std(a)
-    mu_b, std_b = np.mean(b), np.std(b)
-
-    # Check if for any source any AWIN or BWIN value outside mu + sigma * std
-    for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
-        if any(group['AWIN_IMAGE'] > mu_a + sigma * std_a):
-            sources = sources[sources.SOURCE_NUMBER != source_number]
-        if any(group['BWIN_IMAGE'] > mu_b + sigma * std_b):
-            sources = sources[sources.SOURCE_NUMBER != source_number]
-
-    return sources
-
-
-def star_catalog(sources, settings):
+def bright_sources_catalog(sources, settings):
     '''
         Remove sources based on proximity to stars. Requires the HYG stellar
         catalog.
@@ -323,24 +281,47 @@ def star_catalog(sources, settings):
         sources - pandas dataframe, sources data without the sources filtered in this step
     '''
 
+    # If the bright sources cat is the SCAMP reference cat, we have to find the filename
+    if type(settings['BRIGHT_SOURCES_CAT']) == list:
+        refout_catpath, astref_catalog = settings['BRIGHT_SOURCES_CAT']
+        try:
+            settings['BRIGHT_SOURCES_CAT'] = [file for file in os.listdir(refout_catpath)
+                                                       if file.startswith(astref_catalog)][0]
+        except IndexError:
+            from ssos.core import PipelineSettingsException
+            raise PipelineSettingsException('Could not find SCAMP reference catalogue %s\n' \
+                                             'Run SCAMP to retrieve it to file.' % astref_catalog)
+    try:
+        with fits.open(settings['BRIGHT_SOURCES_CAT']) as ref_cat:
+            bright_sources = Table(ref_cat[2].data).to_pandas()
+    except OSError:
+        try:
+            bright_sources = pd.read_csv(settings['BRIGHT_SOURCES_CAT'])
+        except ParserError:
+            from ssos.core import PipelineSettingsException
+            raise PipelineSettingsException('Could not read bright-sources catalogue %s ' % settings['BRIGHT_SOURCES_CAT'])
+
+    #    if settings['BRIGHT_SOURCES_CAT'] == 'REFCAT':
+    bright_sources.rename(index=str, columns={'X_WORLD': 'RA', 'Y_WORLD': 'DEC'}, inplace=True)
+
     distance = settings['DISTANCE'] / 3600 # convert distance to degree
+    lower_mag_limit, upper_mag_limt = [int(limit) for limit in settings['MAG_LIMITS'].split(',')]
 
-    # -----
-    # Open the HYG catalog
-    stars = pd.read_csv(settings['HYGCAT'])
-    stars['ra'] *= 15    # Convert RA coordinates in the HYG catalog from decimal hours to degrees
+    # Remove reference sources which are too faint or too bright
+    bright_sources = bright_sources[(lower_mag_limit <= bright_sources.MAG) &
+                                    (bright_sources.MAG <= upper_mag_limt)]
 
-    # Remove stars which are outside region of interest, given by the minimum and maximum
+    # Remove bright_sources which are outside region of interest, given by the minimum and maximum
     # RA and Dec values of the source candiates plus the distance of the stellar regions
     upper_ra, lower_ra = (sources['ALPHA_J2000'].max() + distance,
                           sources['ALPHA_J2000'].min() - distance)
     upper_dec, lower_dec = (sources['DELTA_J2000'].max() + distance,
                             sources['DELTA_J2000'].min() - distance)
 
-    stars = stars[(stars['ra'] > lower_ra) &\
-                  (stars['ra'] < upper_ra)]
-    stars = stars[(stars['dec'] > lower_dec) &\
-                  (stars['dec'] < upper_dec)]
+    bright_sources = bright_sources[(bright_sources['RA'] > lower_ra) &\
+                  (bright_sources['RA'] < upper_ra)]
+    bright_sources = bright_sources[(bright_sources['DEC'] > lower_dec) &\
+                  (bright_sources['DEC'] < upper_dec)]
 
     for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
 
@@ -348,8 +329,8 @@ def star_catalog(sources, settings):
             mean_dec = np.mean(group['DELTA_J2000'])
 
             try:
-                min_distance_to_star = min(np.sqrt((stars['ra'] - mean_ra)**2 +
-                                                   (stars['dec'] - mean_dec)**2).abs())
+                min_distance_to_star = min(np.sqrt((bright_sources['RA'] - mean_ra)**2 +
+                                                   (bright_sources['DEC'] - mean_dec)**2).abs())
 
             except ValueError:  # reports "min() arg is an empty sequence"
                 continue
