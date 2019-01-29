@@ -2,6 +2,6 @@
 ---
 [![Documentation Status](https://readthedocs.org/projects/sso-pipeline/badge/?version=latest)](https://sso-pipeline.readthedocs.io/en/latest/?badge=latest)
 
-Pipeline to identify and recover astrometry and photometry of Solar System Objects in imaging surveys.
+Pipeline to detect, identify, and recover Solar System Objects in astronomical images.
 
-Online documentation at https://sso-pipeline.readthedocs.io/en/latest/
+The online documentation is available at https://ssos.readthedocs.io/en/latest/
