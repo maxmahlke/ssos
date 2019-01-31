@@ -20,7 +20,7 @@ if len(sys.argv) == 1:
 if sys.argv[1] in ['-d', '--default']:
     path_to_module = os.path.dirname(__file__)
     os.system('cp -i -r {%s,%s} .' % (os.path.join(path_to_module, 'semp'),
-                                   os.path.join(path_to_module, 'pipeline_settings.ssos')))
+                                   os.path.join(path_to_module, 'default.ssos')))
     sys.exit()
 
 from ssos.core import Pipeline
@@ -40,12 +40,19 @@ def main():
 
     # ------
     # Run SCAMP on SExtractor catalogues
-    pipeline.run_SCAMP()
+    if pipeline.settings['REMOVE_REF_SOURCES']:
+    
+        pipeline.run_SCAMP(crossid_radius=1, full_name='full_stars.cat',
+                           merged_name='merged_stars.cat', keep_refcat=True,
+                           adjust_SExtractor_and_aheader=True)
+        pipeline.run_SCAMP(crossid_radius=pipeline.args.CROSSID_RADIUS, solve_astronomy=False, pattern_matching=False)
+    
+    else:
+        pipeline.run_SCAMP(crossid_radius=pipeline.args.CROSSID_RADIUS)
 
     # ========
     # Catalogue creation done
     # ========
-
     pipeline.log.info('\n --- Starting Filter pipeline ---\n\n')
     pipeline.log.info('%s %i\n' % ('All Sources'.ljust(20), pipeline.number_of_sources()))
 
@@ -57,8 +64,8 @@ def main():
     if not pipeline.added_proper_motion:
         pipeline.add_proper_motion()
 
-    if not pipeline.added_trail_morphology:
-        pipeline.add_trail_morphology()
+    if not pipeline.added_SExtractor_data:
+        pipeline.add_SExtractor_data()
 
     # ========
     # FILTERING COMPLETE
@@ -66,6 +73,9 @@ def main():
 
     # ------
     # Optional analyses
+
+    pipeline.add_image_metadata()
+
     for step in pipeline.analysis_steps:
         pipeline.execute_analysis(step)
 

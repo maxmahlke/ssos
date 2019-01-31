@@ -1,17 +1,17 @@
-# Default configuration file for SSO recovery pipeline
+# Default SExtractor configuration file for the ssos pipeline
 #
 
 #-------------------------------- Catalog ------------------------------------
 
-CATALOG_NAME     sso.cat       # name of the output catalog
-CATALOG_TYPE     FITS_LDAC      # NONE,ASCII,ASCII_HEAD, ASCII_SKYCAT,
+CATALOG_NAME     ssos.cat       # name of the output catalog
+CATALOG_TYPE     FITS_LDAC     # NONE,ASCII,ASCII_HEAD, ASCII_SKYCAT,
                                 # ASCII_VOTABLE, FITS_1.0 or FITS_LDAC
-PARAMETERS_NAME  sso.param     # name of the file containing catalog contents
+PARAMETERS_NAME  ssos.param  # name of the file containing catalog contents
 
 #------------------------------- Extraction ----------------------------------
 
 DETECT_TYPE      CCD            # CCD (linear) or PHOTO (with gamma correction)
-DETECT_MINAREA   6              # min. # of pixels above threshold
+DETECT_MINAREA   5              # min. # of pixels above threshold
 DETECT_MAXAREA   0              # max. # of pixels above threshold (0=unlimited)
 THRESH_TYPE      RELATIVE       # threshold type: RELATIVE (in sigmas)
                                 # or ABSOLUTE (in ADUs)
@@ -19,11 +19,11 @@ DETECT_THRESH    1.5            # <sigmas> or <threshold>,<ZP> in mag.arcsec-2
 ANALYSIS_THRESH  1.5            # <sigmas> or <threshold>,<ZP> in mag.arcsec-2
 
 FILTER           Y              # apply filter for detection (Y or N)?
-FILTER_NAME      gauss_2.5_5x5.conv  # name of the file containing the filter
+FILTER_NAME      gauss_2.5_5x5.conv   # name of the file containing the filter
 FILTER_THRESH                   # Threshold[s] for retina filtering
 
 DEBLEND_NTHRESH  16             # Number of deblending sub-thresholds
-DEBLEND_MINCONT  0.05           # Minimum contrast parameter for deblending
+DEBLEND_MINCONT  0.05          # Minimum contrast parameter for deblending
 
 CLEAN            Y              # Clean spurious detections? (Y or N)?
 CLEAN_PARAM      1.0            # Cleaning efficiency
@@ -33,10 +33,10 @@ MASK_TYPE        CORRECT        # type of detection MASKing: can be one of
 
 #-------------------------------- WEIGHTing ----------------------------------
 
-WEIGHT_TYPE      BACKGROUND     # type of WEIGHTing: NONE, BACKGROUND,
+WEIGHT_TYPE      BACKGROUND           # type of WEIGHTing: NONE, BACKGROUND,
                                 # MAP_RMS, MAP_VAR or MAP_WEIGHT
 RESCALE_WEIGHTS  Y              # Rescale input weights/variances (Y/N)?
-WEIGHT_IMAGE     WEIGHT_MAP     # weight-map filename, second extension of exposure
+WEIGHT_IMAGE     weight.fits    # weight-map filename
 WEIGHT_GAIN      Y              # modulate gain (E/ADU) with weights? (Y/N)
 WEIGHT_THRESH                   # weight threshold[s] for bad pixels
 
@@ -46,9 +46,14 @@ FLAG_IMAGE       flag.fits      # filename for an input FLAG-image
 FLAG_TYPE        OR             # flag pixel combination: OR, AND, MIN, MAX
                                 # or MOST
 
+#----------------------- Differential Geometry Map ---------------------------
+
+DGEO_TYPE        NONE           # Differential geometry map type: NONE or PIXEL
+DGEO_IMAGE       dgeo.fits      # Filename for input differential geometry image
+
 #------------------------------ Photometry -----------------------------------
 
-PHOT_APERTURES   25             # MAG_APER aperture diameter(s) in pixels
+PHOT_APERTURES   25              # MAG_APER aperture diameter(s) in pixels
 PHOT_AUTOPARAMS  1.5, 0.8       # MAG_AUTO parameters: <Kron_fact>,<min_radius>
 PHOT_PETROPARAMS 2.0, 0.8       # MAG_PETRO parameters: <Petrosian_fact>,
                                 # <min_radius>
@@ -63,7 +68,7 @@ MAG_ZEROPOINT    0.0            # magnitude zero-point
 MAG_GAMMA        4.0            # gamma of emulsion (for photographic scans)
 GAIN             0.94            # detector gain in e-/ADU
 GAIN_KEY         GAIN           # keyword for detector gain in e-/ADU
-PIXEL_SCALE      0.0            # size of pixel in arcsec (0=use FITS WCS info)
+PIXEL_SCALE      0            # size of pixel in arcsec (0=use FITS WCS info)
 
 #------------------------- Star/Galaxy Separation ----------------------------
 
@@ -109,11 +114,11 @@ ASSOCSELEC_TYPE  MATCHED        # ASSOC selection type: ALL, MATCHED or -MATCHED
 
 #----------------------------- Miscellaneous ---------------------------------
 
-VERBOSE_TYPE     QUIET          # can be QUIET, NORMAL or FULL
+VERBOSE_TYPE     QUIET         # can be QUIET, NORMAL or FULL
 HEADER_SUFFIX    .head          # Filename extension for additional headers
 WRITE_XML        N              # Write XML file (Y/N)?
-XML_NAME         jvar.xml        # Filename for XML output
-XSL_URL          file:///usr/local/Cellar/sextractor/2.19.5/share/sextractor/sextractor.xsl
+XML_NAME         sex.xml        # Filename for XML output
+XSL_URL          file:///usr/local/share/sextractor/sextractor.xsl
                                 # Filename for XSL style-sheet
 NTHREADS         1              # 1 single thread
 
@@ -129,3 +134,4 @@ PSF_NMAX         1              # Max.number of PSFs fitted simultaneously
 PATTERN_TYPE     RINGS-HARMONIC # can RINGS-QUADPOLE, RINGS-OCTOPOLE,
                                 # RINGS-HARMONICS or GAUSS-LAGUERRE
 SOM_NAME         default.som    # File containing Self-Organizing Map weights
+

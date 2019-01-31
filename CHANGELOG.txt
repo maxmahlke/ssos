@@ -1,3 +1,11 @@
+1.2.0
+---
+* Included the option to remove source detections within 1" of the reference catalogue sources in SCAMP before the pattern matching. This is turned on using the REMOVE_REF_SOURCES parameter. Random associations of SSOs with stars and galaxies are effectively removed this way. Note that the importance of the choice of reference catalogue increases.
+* The pre-configured SExtractor and SCAMP config files were updated to the latest versions (2.25.0 and 2.7.7 respectively)
+* Renamed several output parameters to better match common standards
+* Code restructured, leading to major speed ups in SExtractor catalogue look-ups
+
+
 1.1.10
 ---
 * The SCAMP reference catalogue can now be used in the FILTER_STAR_REGIONS step, with an optional limit on the magnitude of the reference sources. Consequently, the FILTER_STAR_REGIONS step is renamed to FILTER_BRIGHT_SOURCES

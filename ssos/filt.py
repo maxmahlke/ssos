@@ -301,7 +301,6 @@ def bright_sources_catalog(sources, settings):
             from ssos.core import PipelineSettingsException
             raise PipelineSettingsException('Could not read bright-sources catalogue %s ' % settings['BRIGHT_SOURCES_CAT'])
 
-    #    if settings['BRIGHT_SOURCES_CAT'] == 'REFCAT':
     bright_sources.rename(index=str, columns={'X_WORLD': 'RA', 'Y_WORLD': 'DEC'}, inplace=True)
 
     distance = settings['DISTANCE'] / 3600 # convert distance to degree
@@ -319,9 +318,9 @@ def bright_sources_catalog(sources, settings):
                             sources['DELTA_J2000'].min() - distance)
 
     bright_sources = bright_sources[(bright_sources['RA'] > lower_ra) &\
-                  (bright_sources['RA'] < upper_ra)]
+                                    (bright_sources['RA'] < upper_ra)]
     bright_sources = bright_sources[(bright_sources['DEC'] > lower_dec) &\
-                  (bright_sources['DEC'] < upper_dec)]
+                                    (bright_sources['DEC'] < upper_dec)]
 
     for source_number, group in sources.copy().groupby('SOURCE_NUMBER'):
 

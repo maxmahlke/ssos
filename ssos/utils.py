@@ -46,11 +46,11 @@ def init_argparse():
 
     group = parser.add_argument_group('Filter Settings')
 
-    for prop in ['FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION', 'IDENTIFY_OUTLIER',
+    for prop in ['REMOVE_REF_SOURCES', 'FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION', 'IDENTIFY_OUTLIER',
                  'FILTER_TRAIL', 'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT',
                  'EXTRACT_CUTOUTS', 'FIXED_APER_MAGS']:
 
-        group.add_argument('-'+prop, metavar='bool', action='store',
+        group.add_argument('-' + prop, metavar='bool', action='store',
                            help='Override ' + prop + ' setting. Must be True or False.',
                            choices=['True', 'False'])
 
@@ -61,7 +61,7 @@ def init_argparse():
                 'OUTLIER_THRESHOLD', 'R_SQU_M', 'RATIO', 'BRIGHT_SOURCES_CAT', 'DISTANCE', 'MAG_LIMITS', 'CROSSMATCH_RADIUS',
                 'CUTOUT_SIZE', 'REFERENCE_FILTER', 'OBSERVATORY_CODE', 'FOV_DIMENSIONS']:
 
-        group.add_argument('-'+val, metavar='value', action='store',
+        group.add_argument('-' + val, metavar='value', action='store',
                            help='Override ' + val + ' setting.')
 
     args = parser.parse_args()

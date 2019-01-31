@@ -37,11 +37,11 @@ Make sure that the astrOmatic binaries :bash:`sex`, :bash:`scamp`, and :bash:`sw
 .. code-block:: bash
 
     $ sex --version
-    SExtractor version 2.19.5 (2015-06-19)
+    SExtractor version 2.25.0
     $ scamp --version
-    SCAMP version 2.0.4 (2015-06-19)
+    SCAMP version 2.7.7
     $ swarp --version
-    SWarp version 2.38.1 (2018-06-28)
+    SWarp version 2.38.1
 
 After installing, you can run the script ``ssos`` from anywhere in your system.
 
@@ -49,10 +49,10 @@ After installing, you can run the script ``ssos`` from anywhere in your system.
 Pipeline Setting Files
 ======================
 
-The default ``pipeline_settings.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/ssos/pipeline_settings.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and expected values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
+The default ``default.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/ssos/default.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and default values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
 
 .. note::
-    The default configuration file ``pipeline_settings.ssos`` and the auxiliary SExtractor, SCAMP, and SWARP setup files are included in the ``python`` package and can be copied to the current working directory using the :bash:`ssos --default` syntax.
+    The default configuration file ``default.ssos`` and the auxiliary SExtractor, SCAMP, and SWARP setup files are included in the ``python`` package and can be copied to the current working directory using the :bash:`ssos -d` or :bash:`ssos --default` syntax.
 
 .. _Guide to SExtractor: http://astroa.physics.metu.edu.tr/MANUALS/sextractor/Guide2source_extractor.pdf
 
@@ -103,6 +103,9 @@ The default ``pipeline_settings.ssos`` file can be `found here <https://github.c
     | `SCAMP_CONFIG`        | string  | semp/sso.scamp                  | SCAMP configuration file to link source detections at different epochs,   |
     |                       |         |                                 | see :ref:`scamp_section`.                                                 |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
+    | `REMOVE_REF_SOURCES   | bool    | True | False                    | Remove source detections close to reference catalogue sources,            |
+    |                       |         |                                 | see :ref:`scamp_section`.                                                 |
+    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     | `SWARP_CONFIG`        | string  | semp/sso.swarp                  | SWARP configuration file for creation of cutout images of SSO candidates, |
     |                       |         |                                 | see :ref:`optional`.                                                      |
@@ -147,20 +150,17 @@ The default ``pipeline_settings.ssos`` file can be `found here <https://github.c
     | `RATIO`               | float   |      0.25                       | Lower limit on the ratio of the error on the weighted mean to the standard|
     |                       |         |                                 | deviation of the source ellipse parameters. See :ref:`filter_section`     |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `FILTER_T_DIST`       | bool    |     True | False                | Turn filter based on distribution of trail sizes in image on or off.      |
-    |                       |         |                                 | See :ref:`filter_section`.                                                |
-    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `SIGMA`               | float   |         2.                      | Upper limit in standard deviation to find outlier in source ellipse       |
-    |                       |         |                                 | parameters. See :ref:`filter_section`.                                    |
-    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `FILTER_STAR_REGIONS` | bool    |      True | False               | Turn filter based on source distance to bright stars on or off.           |
+    |`FILTER_BRIGHT_SOURCES`| bool    |      True | False               | Turn filter based on source distance to bright sources on or off.         |
     |                       |         |                                 | See :ref:`filter_section`.                                                |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     | `DISTANCE`            | float   |        300.                     | Minimum distance of source to bright star in star catalogue in arcsecond. |
     |                       |         |                                 | See :ref:`filter_section`.                                                |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `HYGCAT`              | string  | semp/hygdata_v3.csv             | Absolute path to `HYG <http://www.astronexus.com/hyg>`_ star catalogue.   |
+    | `MAG_LIMITS`          | float   |        -99,99                   | Minimum and maximum magnitudes of bright sources in the catalogue.        |
     |                       |         |                                 | See :ref:`filter_section`.                                                |
+    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
+    | `BRIGHT_SOURCES_CAT`  | string  | REFCAT | path/to/cat            | Use SCAMP reference catalogue or provide path to one,                     |
+    |                       |         |                                 | e.g. `HYG <http://www.astronexus.com/hyg>`_. See :ref:`filter_section`    |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     | `CROSSMATCH_SKYBOT`   | bool    |     True | False                | Turn cross-matching with SkyBoT database on or off. See :ref:`optional`.  |
@@ -184,13 +184,13 @@ The default ``pipeline_settings.ssos`` file can be `found here <https://github.c
 
 The configuration file can be formatted with tabs and spaces. Comments are marked with `#`. Lines beginning with # or newline characters are ignored.
 
-.. note:: The pipeline script first checks if the `-c` flag is pointing to a configuration file. If not, it looks for a file called `pipeline_settings.ssos` in the current working directory. If no file is found, the hard-coded default values are used. Any parameter can be overwritten temporarily by using the appropriate flag, see :ref:`Command-Line API <Command-Line API>`.
+.. note:: The pipeline script first checks if the `-c` flag is pointing to a configuration file. If not, it looks for a file called `default.ssos` in the current working directory. If no file is found, the hard-coded default values are used. Any parameter can be overwritten temporarily by using the appropriate flag, see :ref:`Command-Line API <Command-Line API>`.
 
 
 Survey-Specific Changes
 =======================
 
-It is unlikely that the pipeline will give you the optimum result (clean and complete sample of SSOs) right out-of-the-box. Apart from the ``pipeline_settings.ssos`` parameters listed above, you likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
+It is unlikely that the pipeline will give you the optimum result (clean and complete sample of SSOs) right out-of-the-box. Apart from the ``default.ssos`` parameters listed above, you likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
 
 
 ``ssos.sex``

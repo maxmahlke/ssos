@@ -41,7 +41,7 @@ def extract_cutouts(sources, settings, log, paths, args):
 
     for index, row in sources.iterrows():
 
-        image_file = os.path.join(image_dir, row['FILENAME_EXP']) + '[%i]' % row['EXTENSION']
+        image_file = os.path.join(image_dir, row['IMAGE_FILENAME']) + '[%i]' % row['EXTENSION']
 
         cutout_filename = os.path.join(cutout_dir, '{:.0f}_{:.0f}.fits'.format(row['SOURCE_NUMBER'],
                                                                                row['CATALOG_NUMBER']))
@@ -105,7 +105,7 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
         filter_found = False
         for filter_ in reference_filter:
             try:
-                reference_detection = source.loc[source['FILTER_EXP'] == filter_].iloc[0]
+                reference_detection = source.loc[source['FILTER'] == filter_].iloc[0]
                 filter_found = True
             except IndexError:
                 continue
@@ -208,12 +208,12 @@ def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, 
     # Download SkyBoT query results to VOTABLE
 
     # Get mid-exposure epoch
-    epoch = group['MID_EXP_MJD'].tolist()[0]
+    epoch = group['MID_EXPOSURE_MJD'].tolist()[0]
     epoch = Time(epoch, format='mjd')
     mid_exposure = epoch.isot
 
-    ra_field = group['RA_EXP'].tolist()[0]
-    dec_field = group['DEC_EXP'].tolist()[0]
+    ra_field = group['RA_IMAGE'].tolist()[0]
+    dec_field = group['DEC_IMAGE'].tolist()[0]
 
     query_url = 'http://vo.imcce.fr/webservices/skybot/skybotconesearch_query.php?-ep=%s&-ra=%s&-dec=%s'\
                 '&-bd=%s&-mime=votable&-output=basic&-loc=%s&-filter=0&-objFilter=111&&-from=AF&-top=' %\
@@ -341,7 +341,7 @@ def crossmatch_skybot(sources, settings, log, paths, args):
                          'SKYBOT_ALPHA', 'SKYBOT_DELTA', 'SKYBOT_PMALPHA', 'SKYBOT_PMDELTA'])], axis=1)
 
     # Cross-match for each mid-exposure epoch
-    sources = sources.groupby('DATE-OBS_EXP').apply(_query_and_cross_match, target_dir=target_dir,
+    sources = sources.groupby('DATE-OBS').apply(_query_and_cross_match, target_dir=target_dir,
                                                     fov=fov, obs_code=obs_code, log=log, args=args,
                                                     crossmatch_radius=crossmatch_radius)
 

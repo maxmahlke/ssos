@@ -16,7 +16,7 @@ SExtractor
 
 SExtractor identifies sources in CCD images using the pixel values and outputs catalogue data. Parameters like the pixel positions, sky coordinates, instrumental magnitudes and more are retrieved for each source. Refer to `the official documentation <https://readthedocs.org/projects/sextractor/>`_ and the `Guide to SExtractor <http://astroa.physics.metu.edu.tr/MANUALS/sextractor/Guide2source_extractor.pdf>`_ for much better explanations.
 
-SExtractor is highly configurable using a configuration file. The config file ``ssos.sex`` that is provided with this survey differs slightly from the default version ``default.sex``, specifically the deblending and photometry parameters were adjusted to better deblend SSOs close to other sources. The path to this config file has to be set in the ``pipeline_settings.ssos`` file using the `SEX_CONFIG` parameter. Likewise, `SEX_PARAMS` has to point to the output parameter file, by default ``semp/ssos.param``.
+SExtractor is highly configurable using a configuration file. The config file ``ssos.sex`` that is provided with this survey differs slightly from the default version ``default.sex``, specifically the deblending and photometry parameters were adjusted to better deblend SSOs close to other sources. The path to this config file has to be set in the ``default.ssos`` file using the `SEX_CONFIG` parameter. Likewise, `SEX_PARAMS` has to point to the output parameter file, by default ``semp/ssos.param``.
 
 The SExtractor configuration as set in ``ssos.sex`` requires two more files, the convolution filter set via the `SEX_FILTER` parameter and the neural network for star-galaxy differentiation, set via the `SEX_NNW` keyword, located in ``semp/gauss_2.5_5x5.conv`` and ``semp/default.nnw`` respectively.
 
@@ -46,20 +46,27 @@ SCAMP
 
 SCAMP provides the astrometric solution for the pipeline: The SExtractor catalogues from the first step sharing the same field-of-view (FoV) are matched against each other using a reference catalogue, and the source coordinates are solved for translation, rotation, and distortion of the original images. This way, sources detected in several images over different epochs can be traced from one image to another, their detections are linked. Again, find a better explanation in the `official documentation <https://scamp.readthedocs.io/en/latest/>`_.
 
-Much like SExtractor, SCAMP is highly configurable and the supplied configuration file ``ssos.scamp`` has to be linked to using the `SCAMP_CONFIG` in the ``pipeline_settings.ssos`` file.
+Much like SExtractor, SCAMP is highly configurable and the supplied configuration file ``ssos.scamp`` has to be linked to using the `SCAMP_CONFIG` in the ``default.ssos`` file.
 
-Once SCAMP has matched the SExtractor catalogues, it creates among others two catalogues, the ``full_cat_1.cat`` and the ``merged_cat_1.cat``. The former contains all source detections of all images, given positions in pixel and sky coordinates, fluxes, etc., while the latter lists the properties of the merged (linked) detections, i.e. proper motion and other properties of all sources which were traced over several images. Both catalogues will be used in the subsequent analysis, specifically the full catalogue, as it holds the important information on the movement of the sources over time.
+Once SCAMP has matched the SExtractor catalogues, it creates among others two catalogues, the ``full_1.cat`` and the ``merged_1.cat``. The former contains all source detections of all images, given positions in pixel and sky coordinates, fluxes, etc., while the latter lists the properties of the merged (linked) detections, i.e. proper motion and other properties of all sources which were traced over several images. Both catalogues will be used in the subsequent analysis, specifically the full catalogue, as it holds the important information on the movement of the sources over time.
 
 .. note::
 
     The SExtractor and SCAMP runs are the computationally most challenging parts of this pipeline and therefore the bottlenecks in execution time. To allow for quick pipeline runs in order to find the optimal settings, the script checks for the existence of the output catalogues before running the software. If the catalogues already exist, these steps are skipped. This behaviour can be overruled by setting the ``--sex``, ``--scamp``, and ``--swarp`` flags in the pipeline call.
+
+
+**Removing Reference Source Detections** - v.1.2.0
+
+The reference catalogue used by SCAMP can be used to identify stars and galaxies in the images. Removing these sources from the catalogues before SCAMP associates the source detections over epochs can increase the chance of succesful detections. Setting the `REMOVE_REF_SOURCES` parameter to true will execute SCAMP twice: First, with a cross-match radius of 1", linking all stars and galaxy detections (and any other source detection within that radius). Sources which were matched a certain number of times and to a source in the reference catalogue are then flagged in the SExtractor catalogues. Finally, the astrometric solution derived by SCAMP is added to the `.ahead` files.
+SCAMP is then re-run, with the astrometric solution provided and the cross-match radius as set in the configuration file. Only transient sources should be included in the pattern matching sample.
+
 
 .. _filter_section:
 
 Filter Chain
 ============
 
-All filter steps are optional and can be turned on/off and adjusted via the ``pipeline_settings.ssos`` configuration file.
+All filter steps are optional and can be turned on/off and adjusted via the ``default.ssos`` configuration file.
 
 Filter by Number of Detections
 ------------------------------
@@ -138,22 +145,16 @@ and removes sources which show standard deviations larger than the `RATIO` param
     By default, this filter is disabled.
 
 
-Filter by Trail Size Distribution
----------------------------------
-Setting: `FILTER_T_DIST`  |  Parameters: `SIGMA`
 
-This filter acts on the SExtractor source ellipse parameters `AWIN_IMAGE` and `BWIN_IMAGE`. The standard deviation of each of the semi-major- and semi-minor axes is calculated. Sources with size parameters larger than the mean plus `SIGMA` times the standard deviation are rejected. This filter was implemented against ghosts introduced by bright stars, which can perfectly imitate linear motion depending on the dithering pattern of the observations.
+Filter by Bright Sources
+------------------------
+Setting: `FILTER_BRIGHT_SOURCES`  |  Parameters: `DISTANCE`, `MAG_LIMITS`, `BRIGHT_SOURCES_CAT`
 
-.. note::
+Bright sources tend to introduce numerous artifacts like refraction spikes and reflection ghosts into images. As the position of these artifacts depends on the camera geometry and pointing, they tend to follow the dithering pattern and display linear movement over all observation epochs. Sources close to bright stars therefore tend to contain a large fraction of these artifacts, and can be rejected with this filter. T
+The reference catalogue can be set to `REFCAT`, meaning that the SCAMP reference catalogue is used. In this case, it is retrieved to a local file. Alternatively, a path to a local file can be provided, such as the `HYG database <http://www.astronexus.com/hyg>`_.
+The `DISTANCE` parameter sets the radius around bright stars in arcsecond where all sources are cleared from. The `MAG_LIMITS` setting applies upper and lower magnitude limits on the sources in the catalogue before the filtering.
 
-    By default, this filter is disabled.
-
-
-Filter by Star Region
----------------------
-Setting: `FILTER_STAR_REGIONS`  |  Parameters: `DISTANCE`, `HYGCAT`
-
-Bright stars tend to introduce numerous artifacts like refraction spikes and reflection ghosts into images. As the position of these artifacts depends on the camera geometry and pointing, they tend to follow the dithering pattern and display linear movement over all observation epochs. Sources close to bright stars therefore tend to contain a large fraction of these artifacts, and can be rejected with this filter. The `DISTANCE` parameter sets the radius around bright stars in arcsecond where all sources are cleared from. The `HYG database <http://www.astronexus.com/hyg>`_ is used to define the RA / DEC coordinate pairs of bright stars and is located in ``semp/hygdata_v3.csv``.
+The local reference catalogue has to be either in CSV and FITS file format. The columns have to be named `RA`, `DEC` (both in degree), and `MAG`. If `BRIGHT_SOURCES_CAT` is set to `REFCAT`, no further adaptations are necessary.
 
 .. _optional:
 

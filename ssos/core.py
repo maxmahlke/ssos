@@ -1,3 +1,4 @@
+from collections import Counter
 import os
 import time
 import sys
@@ -8,7 +9,7 @@ from astropy.table import Table
 from astropy.time import Time
 import astropy.units as u
 import numpy as np
-from pandas import Series
+import pandas as pd
 
 import ssos.filt as filt
 from ssos.opt import extract_cutouts
@@ -63,7 +64,7 @@ class Pipeline:
         self.steps = [param for param in FILTER_STEPS.keys() if self.settings[param]]
         self.analysis_steps = [param for param in ANALYSIS_STEPS.keys() if self.settings[param]]
         self.added_proper_motion = False
-        self.added_trail_morphology = False
+        self.added_SExtractor_data = False
 
         # Little hack for fixed apertuer magnitudes "without" cutout extraction
         if not self.settings['EXTRACT_CUTOUTS'] and self.settings['FIXED_APER_MAGS']:
@@ -199,7 +200,7 @@ class Pipeline:
             settings['WEIGHT_IMAGES'] = False
 
         # Convert filter strings to booleans
-        for param in ['FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
+        for param in ['REMOVE_REF_SOURCES', 'FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
                       'IDENTIFY_OUTLIER', 'FILTER_TRAIL',
                       'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT', 'EXTRACT_CUTOUTS',
                       'FIXED_APER_MAGS']:
@@ -304,11 +305,9 @@ class Pipeline:
             with fits.open(image) as exposure:
                 try:
                     date_obs = exposure[sci_extension].header[self.settings['DATE-OBS']]
-                except KeyError: # check primary header
+                except (IndexError, KeyError): # check primary header
                     date_obs = exposure[0].header[self.settings['DATE-OBS']]
             return cat, date_obs
-
-
 
         sex_args = {
 
@@ -326,7 +325,6 @@ class Pipeline:
             sex_args['overwrite_params']['WEIGHT_IMAGE'] = 'MAP_WEIGHT'
 
             if extension is not False:
-                print(extension)
                 weight_suffix = '_%i.weight' % extension
             else:
                 weight_suffix = '.weight'
@@ -353,7 +351,7 @@ class Pipeline:
             # Following http://www.astromatic.net/forum/showthread.php?tid=501
             try:
                 date_obs = exposure[sci_extension].header[self.settings['DATE-OBS']]
-            except KeyError: # check primary header
+            except (KeyError, IndexError): # check primary header
                 date_obs = exposure[0].header[self.settings['DATE-OBS']]
 
             mjd = Time(date_obs, format='isot').mjd
@@ -400,23 +398,31 @@ class Pipeline:
         self.SExtractor_catalogues = [cat for _, cat in sorted(zip(observation_epochs,
                                                                self.SExtractor_catalogues))]
 
-    def run_SCAMP(self):
+
+    def run_SCAMP(self, crossid_radius=None, full_name='full.cat',
+                  merged_name='merged.cat', keep_refcat=False,
+                  solve_astronomy=True, pattern_matching=True,
+                  adjust_SExtractor_and_aheader=False):
         ''' Run SCAMP on SExtractor catalogs '''
 
         # ------
         # Set-up SCAMP run
-        self.merged_cat = os.path.join(self.paths['cats'], 'merged_1.cat')
-        self.full_cat = os.path.join(self.paths['cats'], 'full_1.cat')
+        self.merged_cat = os.path.join(self.paths['cats'], merged_name)
+        self.full_cat = os.path.join(self.paths['cats'], full_name)
 
         scamp_args = {
-            'files':  self.SExtractor_catalogues, # catalogs to SCAMP
+            'files':  self.SExtractor_catalogues,
             'config': self.settings['SCAMP_CONFIG'],
 
             'overwrite_params': {
-                'MERGEDOUTCAT_NAME': self.merged_cat[:-6] + '.cat', # SCAMP appends '_1' on its own
-                'FULLOUTCAT_NAME':   self.full_cat[:-6] + '.cat',
+                'MERGEDOUTCAT_NAME': self.merged_cat,
+                'FULLOUTCAT_NAME':   self.full_cat,
                 },
             }
+
+        # SCAMP appends an index for the Field Group to the output catalogues
+        self.merged_cat = self.merged_cat.replace('.cat', '_1.cat')
+        self.full_cat = self.full_cat.replace('.cat', '_1.cat')
 
         if self.args.ASTREF_CATALOG is not None:
             scamp_args['overwrite_params']['ASTREF_CATALOG'] = self.args.ASTREF_CATALOG
@@ -425,8 +431,15 @@ class Pipeline:
            self.settings['BRIGHT_SOURCES_CAT'] == 'REFCAT':
             scamp_args['overwrite_params']['SAVE_REFCATALOG'] = 'Y'
 
-        if self.args.CROSSID_RADIUS is not None:
-            scamp_args['overwrite_params']['CROSSID_RADIUS'] = str(self.args.CROSSID_RADIUS)
+        if not solve_astronomy:
+            scamp_args['overwrite_params']['SOLVE_ASTROM'] = 'N'
+            scamp_args['overwrite_params']['INCLUDE_ASTREFCATALOG'] = 'N'
+
+        if not pattern_matching:
+            scamp_args['overwrite_params']['MATCH'] = 'N'
+
+        if crossid_radius is not None:
+            scamp_args['overwrite_params']['CROSSID_RADIUS'] = str(crossid_radius)
 
         if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
             self.log.info('\nReading SCAMP catalogues from file..\t')
@@ -444,23 +457,68 @@ class Pipeline:
             self.log.debug('\nExecuting SCAMP command:\n%s\n' % cmd)
             os.system(cmd)
 
-        # Add the SCAMP catalog numbers to the SExtactor catalogs dictionary
-        self.SExtractor_catalogues = {i: filename for i, filename in
-                                                enumerate(self.SExtractor_catalogues, 1)}
-
         # Create the full catalog as pipeline property
         with fits.open(self.full_cat) as full:
             data = Table(full[2].data)
 
         self.sources = data.to_pandas()
+        
+        if not keep_refcat:
+            # Catalogue number 0 are the reference sources
+            self.sources = self.sources[self.sources['CATALOG_NUMBER'] != 0]
+
+        if adjust_SExtractor_and_aheader:
+            self.adjust_SExtractor_catalogues()
+            self.adjust_ahead_files()
 
         # Ensure that EPOCHs are in order
         self.sources = self.sources.sort_values(['SOURCE_NUMBER', 'EPOCH'],
-                                                ascending=[False, False])
+                                                ascending=[True, True])
         self.sources = self.sources.reset_index()
-        # Catalogue number 0 signals bad detections in SExtractor
-        self.sources = self.sources[self.sources['CATALOG_NUMBER'] != 0]
+        
+        # Add flag to dataframe
+        self.sources['FLAGS_SSOS'] = 0
         self.log.info('Done.\n')
+
+
+    def adjust_SExtractor_catalogues(self):
+        # Flags source detections which were associated to reference sources
+        # These will subsequently be ignored by SCAMP
+        self.log.info('Adjusting SExtractor catalogues for pattern matching..\n')
+        REMOVE_DETECTIONS = 2 # 1 image + reference, lower limit
+
+        detections = Counter(self.sources.SOURCE_NUMBER) # this includes references
+        flag = [source for source, count in detections.items() if count >= REMOVE_DETECTIONS]
+
+        self.sources = self.sources[self.sources.SOURCE_NUMBER.isin(flag)]
+        self.sources = self.sources[self.sources.CATALOG_NUMBER != 0]
+
+        for cat_number, catalogue in self.sources.groupby('CATALOG_NUMBER'):
+            with fits.open(self.SExtractor_catalogues[cat_number-1]) as cat:
+            
+                for extension, detections in catalogue.groupby('EXTENSION'):   
+                    extension *= 2 # extensions are HEADER and DATA
+
+                    xwin_img = cat[extension].data.field('XWIN_IMAGE')
+                    detections_to_flag = np.in1d(xwin_img, detections.X_IMAGE)
+                    cat[extension].data['FLAGS'][detections_to_flag] = 128
+
+                cat.writeto(self.SExtractor_catalogues[cat_number-1], overwrite=True)
+
+    def adjust_ahead_files(self):
+        self.log.info('Copying astrometric solution to aheader files..\n')
+        aheaders = [cat.replace('.cat', '.ahead') for cat in self.SExtractor_catalogues]
+
+        for ahead in aheaders:
+            with open(ahead, 'r') as ahead_file:
+                mjd_obs = ahead_file.readline()
+
+            with open(ahead, 'w') as ahead_file:
+                with open(ahead.replace('.ahead', '.head'), 'r') as head_file:
+                    for line in head_file:
+                        if 'END' in line:
+                            line = mjd_obs + line
+                        ahead_file.write(line)
 
 
     def number_of_sources(self):
@@ -502,8 +560,7 @@ class Pipeline:
 
         # The trail filters have to access the SExtractor catalogues first
         if step_name in ['FILTER_PIXEL', 'FILTER_TRAIL', 'FILTER_T_DIST']:
-            self.add_trail_morphology()
-
+            self.add_SExtractor_data()
 
         self.sources = FILTER_STEPS[step_name](self.sources, self.settings)
 
@@ -513,102 +570,89 @@ class Pipeline:
         Adds proper motion values from merged to full catalog.  Has to be called
         either before filtering the proper motion or at the end of the pipeline.
         '''
-
         with fits.open(self.merged_cat) as merged:
             data = Table(merged[2].data)
 
-        # Pandas cannot handle multi-dimensional columns which SCAMP outputs
-        # for magnitudes in different filters
-        cols = tuple(name for name in data.colnames if len(data[name].shape) <= 1)
-        data = data[cols]
+        proper_motion_columns = ['PMALPHA_J2000', 'PMALPHAERR_J2000',
+                                 'PMDELTA_J2000', 'PMDELTAERR_J2000']
 
-        sources_merged = data.to_pandas()
-        sources_merged = sources_merged[
-                         sources_merged.SOURCE_NUMBER.isin(self.sources.SOURCE_NUMBER)
-                         ]
+        merged = data[['SOURCE_NUMBER'] + proper_motion_columns].to_pandas()
+        
+        # Add proper motions column from merged catalog to source database
+        self.sources = self.sources.merge(merged, on='SOURCE_NUMBER')
 
-        for column in ['PMALPHA_J2000', 'PMDELTA_J2000', 'PMALPHAERR_J2000', 'PMDELTAERR_J2000']:
-            sources_merged[column] = sources_merged[column].apply(lambda x: x / 8.75e6)
+        for column in proper_motion_columns:
+            self.sources[column] = self.sources[column].apply(lambda x: x / 8.75e6)
 
         # Add proper motion column.  Factor 8.75e6 converts to "/h
-        sources_merged['PM'] = sources_merged.apply(lambda x:
+        self.sources['PM'] = self.sources.apply(lambda x:
                                np.sqrt(x['PMALPHA_J2000']**2 + x['PMDELTA_J2000']**2),
                                axis=1)
-        sources_merged['PMERR'] = sources_merged.apply(lambda x:
+        self.sources['PMERR'] = self.sources.apply(lambda x:
                                np.sqrt(x['PMALPHAERR_J2000']**2 + x['PMDELTAERR_J2000']**2),
                                axis=1)
 
-        # Add proper motions column from merged catalog to source database
-        self.sources = self.sources.merge(sources_merged[['SOURCE_NUMBER', 'PM', 'PMERR',
-                                                          'PMALPHA_J2000', 'PMALPHAERR_J2000',
-                                                          'PMDELTA_J2000', 'PMDELTAERR_J2000']],
-                                                          on='SOURCE_NUMBER')
-        # Add flag to dataframe
-        self.sources['FLAGS_SSOS'] = 0
-
-        self.sources_merged = sources_merged
         self.added_proper_motion = True
 
 
-    def add_trail_morphology(self):
+    def add_SExtractor_data(self):
         '''
         Adds the trail morphology parameters from the SExtractor catalogues to
         the source database.  Has to be called either before filtering on trail
         morphology or at the end of the pipeline.
         '''
 
-        sources = self.sources
+        # Add SExtractor data
+        morphometry_columns = ['AWIN_IMAGE', 'BWIN_IMAGE', 'THETAWIN_IMAGE',
+                               'XWIN_IMAGE', 'YWIN_IMAGE', 'ERRAWIN_IMAGE',
+                               'ERRBWIN_IMAGE', 'ERRTHETAWIN_IMAGE', 'FLUX_AUTO',
+                               'FLUXERR_AUTO']
+        self.sources['XWIN_IMAGE'] = self.sources['X_IMAGE']
+        
+        sextractor_data = pd.DataFrame(index=[], columns=morphometry_columns)
 
-        for cat_ext, group in sources.groupby(['CATALOG_NUMBER', 'EXTENSION']):
 
-            cat_number, ext_number = cat_ext
-            ext_number *= 2 # extensions are HEADER and DATA
+        for catalogue in self.SExtractor_catalogues:
+            with fits.open(catalogue) as cat:
+                for j, header in enumerate(cat):
+                    if j % 2 == 0 and j != 0:
+                        data = Table(header.data)[:][morphometry_columns]
+                        sextractor_data = sextractor_data.append(data.to_pandas(),
+                                                     ignore_index=True, sort=True)
 
-            with fits.open(self.SExtractor_catalogues[cat_number]) as cat:
+        self.sources = pd.merge(self.sources, sextractor_data[morphometry_columns],
+                                on='XWIN_IMAGE', how='left')
+        self.added_SExtractor_data = True
 
-                xwin_img = Series(cat[ext_number].data.field('XWIN_IMAGE')) # SExtractor X pixel coordinates
 
-                for index, source in group.iterrows():
-                    index_in_sex_cat = xwin_img[xwin_img == source['X_IMAGE']].index[0]
-                    for prop in ['AWIN_IMAGE', 'BWIN_IMAGE', 'THETAWIN_IMAGE',
-                                 'XWIN_IMAGE', 'YWIN_IMAGE',
-                                 'ERRAWIN_IMAGE', 'ERRBWIN_IMAGE', 'ERRTHETAWIN_IMAGE']:
-                        sources.loc[index, prop] = cat[ext_number].data.field(prop)[index_in_sex_cat]
+    def add_image_metadata(self):
 
-                    # Replace SCAMP magnitudes with the SExtractor ones
-                    for prop in ['MAG', 'MAGERR', 'FLUX', 'FLUXERR']:
-                        sources.loc[index, prop] = cat[ext_number].data.field(prop + '_AUTO')[index_in_sex_cat]
+        # Derive image filename from SExtractor catalogue
+        for cat_number, group in self.sources.groupby('CATALOG_NUMBER'):
 
-                # Add the image filename and science extension
-                if self.settings['SCI_EXTENSION']:
-                    image_filename = '_'.join(os.path.splitext(
-                                                 os.path.basename(self.SExtractor_catalogues[cat_number])
-                                                              )[0].split('_')[:-1]) + '.fits'
-                else:
-                    image_filename = os.path.basename(self.SExtractor_catalogues[cat_number]).replace('.cat', '.fits')
+            if self.settings['SCI_EXTENSION']:
+                image_filename = '_'.join(os.path.splitext(
+                                            os.path.basename(self.SExtractor_catalogues[cat_number-1])
+                                                          )[0].split('_')[:-1]) + '.fits'
+            else:
+                image_filename = os.path.basename(self.SExtractor_catalogues[cat_number-1]).replace('.cat', '.fits')
 
-                if self.settings['SCI_EXTENSION']: # set value written to output table
-                    sci_ext = int(os.path.splitext(self.SExtractor_catalogues[cat_number])[0].split('_')[-1])
-                    sources.loc[group.index, 'EXTENSION'] = sci_ext
+            self.sources.loc[group.index, 'IMAGE_FILENAME'] = image_filename
 
-                else: # set lookup index
-                    sci_ext = 1
+        # Add image metadata. Have to use the correct header extension
+        for image_filename, group in self.sources.groupby(['IMAGE_FILENAME']):
 
-                sources.loc[group.index, 'FILENAME_EXP'] = image_filename
+            extension = group.EXTENSION.values[0]
+            # Add exposure keywords
+            with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
+                for prop in ['OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME', 'RA_IMAGE', 'DEC_IMAGE']:
+                    try:
+                        self.sources.loc[group.index, prop]   = exposure[extension].header[self.settings[prop.split('_')[0]]]
+                    except (IndexError, KeyError): # check primary header
+                        self.sources.loc[group.index, prop]   = exposure[0].header[self.settings[prop.split('_')[0]]]
 
-                # Add exposure keywords
-                with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
-                    for prop in ['OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME', 'RA', 'DEC']:
-                        try:
-                            sources.loc[group.index, prop + '_EXP']   = exposure[sci_ext].header[self.settings[prop]]
-                        except KeyError: # check primary header
-                            sources.loc[group.index, prop + '_EXP']   = exposure[0].header[self.settings[prop]]
-
-        sources['MID_EXP_MJD'] = sources.apply(lambda x: (Time(x['DATE-OBS_EXP'], format='isot') +
-                                               float(x['EXPTIME_EXP']) / 2 * u.second).mjd, axis=1)
-
-        self.sources = sources
-        self.added_trail_morphology = True
+        self.sources['MID_EXPOSURE_MJD'] = self.sources.apply(lambda x: (Time(x['DATE-OBS'], format='isot') +
+                                                                        float(x['EXPTIME']) / 2 * u.second).mjd, axis=1)
 
 
     def execute_analysis(self, step_name):
@@ -632,12 +676,13 @@ class Pipeline:
                                                 'PMALPHAERR_J2000': 'PMRA_ERR', 'PMDELTA_J2000': 'PMDEC',
                                                 'PMDELTAERR_J2000': 'PMDEC_ERR', 'SKYBOT_PMALPHA': 'SKYBOT_PMRA',
                                                 'SKYBOT_PMDELTA': 'SKYBOT_PMDEC', 'SKYBOT_ALPHA': 'SKYBOT_RA',
-                                                'SKYBOT_DELTA': 'SKYBOT_DEC'}, inplace=True)
+                                                'SKYBOT_DELTA': 'SKYBOT_DEC', 'FLUX_AUTO': 'FLUX',
+                                                'FLUXERR_AUTO': 'FLUXERR'}, inplace=True)
 
         # Rearrange columns
         ordered_columns = ['SOURCE_NUMBER', 'CATALOG_NUMBER', 'RA', 'DEC', 'EPOCH', 'MAG', 'MAGERR', 'FLUX', 'FLUXERR',
-                           'PM', 'PMERR', 'PMRA',  'PMRA_ERR', 'PMDEC', 'PMDEC_ERR', 'MID_EXP_MJD', 'DATE-OBS_EXP',
-                           'EXPTIME_EXP', 'OBJECT_EXP', 'FILTER_EXP', 'RA_EXP', 'DEC_EXP', 'FILENAME_EXP',
+                           'PM', 'PMERR', 'PMRA',  'PMRA_ERR', 'PMDEC', 'PMDEC_ERR', 'MID_EXPOSURE_MJD', 'DATE-OBS',
+                           'EXPTIME', 'OBJECT', 'FILTER', 'RA_IMAGE', 'DEC_IMAGE', 'IMAGE_FILENAME',
                            'EXTENSION', 'XWIN_IMAGE', 'YWIN_IMAGE', 'AWIN_IMAGE', 'ERRAWIN_IMAGE', 'BWIN_IMAGE',
                            'ERRBWIN_IMAGE', 'THETAWIN_IMAGE', 'ERRTHETAWIN_IMAGE', 'ERRA_WORLD', 'ERRB_WORLD',
                            'ERRTHETA_WORLD', 'FLAGS_EXTRACTION', 'FLAGS_SCAMP', 'FLAGS_IMA', 'FLAGS_SSOS']

@@ -1,5 +1,5 @@
 name = 'ssos'
-__version__ = '1.1.10'
+__version__ = '1.2.0'
 
 
 GREETING = '''
