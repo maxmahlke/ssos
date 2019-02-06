@@ -12,7 +12,7 @@ Getting Started
 Installing the Pipeline
 =======================
 
-The _ssos_ pipeline is available from the Python Package Index via [#]_
+The ``ssos`` pipeline is available from the Python Package Index via [#]_
 
 .. code-block:: bash
 
