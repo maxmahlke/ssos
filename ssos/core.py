@@ -443,6 +443,7 @@ class Pipeline:
 
         if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
             self.log.info('\nReading SCAMP catalogues from file..\t')
+            scamp_from_file = True
 
         else:
             self.log.info('\nRunning SCAMP..\t')
@@ -456,6 +457,7 @@ class Pipeline:
 
             self.log.debug('\nExecuting SCAMP command:\n%s\n' % cmd)
             os.system(cmd)
+            scamp_from_file = False
 
         # Create the full catalog as pipeline property
         with fits.open(self.full_cat) as full:
@@ -467,7 +469,7 @@ class Pipeline:
             # Catalogue number 0 are the reference sources
             self.sources = self.sources[self.sources['CATALOG_NUMBER'] != 0]
 
-        if (self.args.scamp or not os.path.isfile(self.merged_cat) or not os.path.isfile(self.full_cat)) \
+        if (self.args.scamp or not scamp_from_file) \
             and adjust_SExtractor_and_aheader:
             self.adjust_SExtractor_catalogues()
             self.adjust_ahead_files()
