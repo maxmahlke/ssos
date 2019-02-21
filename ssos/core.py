@@ -433,7 +433,7 @@ class Pipeline:
 
         if not solve_astronomy:
             scamp_args['overwrite_params']['SOLVE_ASTROM'] = 'N'
-            scamp_args['overwrite_params']['INCLUDE_ASTREFCATALOG'] = 'N'
+            scamp_args['overwrite_params']['INCLUDE_ASTREFCATALOG'] = 'Y'
 
         if not pattern_matching:
             scamp_args['overwrite_params']['MATCH'] = 'N'
@@ -462,12 +462,13 @@ class Pipeline:
             data = Table(full[2].data)
 
         self.sources = data.to_pandas()
-        
+
         if not keep_refcat:
             # Catalogue number 0 are the reference sources
             self.sources = self.sources[self.sources['CATALOG_NUMBER'] != 0]
 
-        if adjust_SExtractor_and_aheader:
+        if (self.args.scamp or not os.path.isfile(self.merged_cat) or not os.path.isfile(self.full_cat)) \
+            and adjust_SExtractor_and_aheader:
             self.adjust_SExtractor_catalogues()
             self.adjust_ahead_files()
 
@@ -475,7 +476,7 @@ class Pipeline:
         self.sources = self.sources.sort_values(['SOURCE_NUMBER', 'EPOCH'],
                                                 ascending=[True, True])
         self.sources = self.sources.reset_index()
-        
+
         # Add flag to dataframe
         self.sources['FLAGS_SSOS'] = 0
         self.log.info('Done.\n')
@@ -488,15 +489,21 @@ class Pipeline:
         REMOVE_DETECTIONS = 2 # 1 image + reference, lower limit
 
         detections = Counter(self.sources.SOURCE_NUMBER) # this includes references
-        flag = [source for source, count in detections.items() if count >= REMOVE_DETECTIONS]
+        flag_count = [source for source, count in detections.items() if count >= REMOVE_DETECTIONS]
+
+        # only remove sources which were associated to a reference
+        flag = []
+        for source_number in flag_count:
+            if 0 in self.sources[self.sources.SOURCE_NUMBER == source_number]['CATALOG_NUMBER'].values:
+                flag.append(source_number)
 
         self.sources = self.sources[self.sources.SOURCE_NUMBER.isin(flag)]
         self.sources = self.sources[self.sources.CATALOG_NUMBER != 0]
 
         for cat_number, catalogue in self.sources.groupby('CATALOG_NUMBER'):
             with fits.open(self.SExtractor_catalogues[cat_number-1]) as cat:
-            
-                for extension, detections in catalogue.groupby('EXTENSION'):   
+
+                for extension, detections in catalogue.groupby('EXTENSION'):
                     extension *= 2 # extensions are HEADER and DATA
 
                     xwin_img = cat[extension].data.field('XWIN_IMAGE')
@@ -577,7 +584,7 @@ class Pipeline:
                                  'PMDELTA_J2000', 'PMDELTAERR_J2000']
 
         merged = data[['SOURCE_NUMBER'] + proper_motion_columns].to_pandas()
-        
+
         # Add proper motions column from merged catalog to source database
         self.sources = self.sources.merge(merged, on='SOURCE_NUMBER')
 
@@ -608,7 +615,7 @@ class Pipeline:
                                'ERRBWIN_IMAGE', 'ERRTHETAWIN_IMAGE', 'FLUX_AUTO',
                                'FLUXERR_AUTO']
         self.sources['XWIN_IMAGE'] = self.sources['X_IMAGE']
-        
+
         sextractor_data = pd.DataFrame(index=[], columns=morphometry_columns)
 
 
