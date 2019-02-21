@@ -12,7 +12,7 @@ Getting Started
 Installing the Pipeline
 =======================
 
-The _ssos_ pipeline is available from the Python Package Index via [#]_
+The ``ssos`` pipeline is available from the Python Package Index via [#]_
 
 .. code-block:: bash
 
@@ -103,7 +103,7 @@ The default ``default.ssos`` file can be `found here <https://github.com/maxmahl
     | `SCAMP_CONFIG`        | string  | semp/sso.scamp                  | SCAMP configuration file to link source detections at different epochs,   |
     |                       |         |                                 | see :ref:`scamp_section`.                                                 |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `REMOVE_REF_SOURCES   | bool    | True | False                    | Remove source detections close to reference catalogue sources,            |
+    | `REMOVE_REF_SOURCES`  | bool    | True | False                    | Remove source detections close to reference catalogue sources,            |
     |                       |         |                                 | see :ref:`scamp_section`.                                                 |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
