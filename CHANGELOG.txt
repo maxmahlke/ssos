@@ -1,3 +1,13 @@
+1.2.2
+---
+* default.ssos is now properly included in the pip install
+
+1.2.1
+---
+* SCAMP does not properly compute the proper motion of sources without a reference source association when choosing INCLUDE_ASTREFCAT to false. It is now always set to true while the bug is being investigated
+* SExtractor catalogue header files are not adjusted anymore when SCAMP has not been run since the last time they were changed
+* Excluded the HYGCAT from the package, it can be retrieved from http://www.astronexus.com/hyg
+
 1.2.0
 ---
 * Included the option to remove source detections within 1" of the reference catalogue sources in SCAMP before the pattern matching. This is turned on using the REMOVE_REF_SOURCES parameter. Random associations of SSOs with stars and galaxies are effectively removed this way. Note that the importance of the choice of reference catalogue increases.
