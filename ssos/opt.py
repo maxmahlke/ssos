@@ -6,10 +6,8 @@
 '''
 
 import os
-import urllib.request
 
 from astropy.io import fits
-from astropy.io.votable import parse_single_table
 from astropy.time import Time
 import numpy as np
 import pandas as pd
@@ -40,10 +38,10 @@ def extract_cutouts(sources, settings, log, paths, args):
     swarp_config = settings['SWARP_CONFIG']
 
     for index, row in sources.iterrows():
+        img_ext = settings['SCI_EXTENSION'][row['EXTENSION'] - 1] if settings['SCI_EXTENSION'] else row['EXTENSION'] - 1
+        image_file = os.path.join(image_dir, row['IMAGE_FILENAME']) + '[%i]' % img_ext
 
-        image_file = os.path.join(image_dir, row['IMAGE_FILENAME']) + '[%i]' % row['EXTENSION']
-
-        cutout_filename = os.path.join(cutout_dir, '{:.0f}_{:.0f}.fits'.format(row['SOURCE_NUMBER'],
+        cutout_filename = os.path.join(cutout_dir, '{:.0f}_{:02d}.fits'.format(row['SOURCE_NUMBER'],
                                                                                row['CATALOG_NUMBER']))
 
         if not args.swarp and os.path.isfile(cutout_filename):
@@ -185,80 +183,7 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
     return sources
 
 
-def _query_and_cross_match(group, target_dir, fov, obs_code, crossmatch_radius, log, args):
-    '''
-    Retrieves the SkyBoT query XML file for sources grouped by the DATE-OBS keyword
-
-    input
-    ------
-    group - pd.DataFrame, table of source data
-    target_dir - str, absolute path to SkyBoT folder
-    fov - str, value of FOV_DIMENSIONS parameter
-    obs_code - str, value of OBSERVATORY_CODE parameter
-    crossmatch_radius - float, crossmatch radius in degree
-    log - logging object
-    args - command line argument parser
-
-    return
-    -------
-    group - pd.DataFrame group, sources grouped by DATE-OBS with SkyBoT data added
-    '''
-
-    # ------
-    # Download SkyBoT query results to VOTABLE
-
-    # Get mid-exposure epoch
-    epoch = group['MID_EXPOSURE_MJD'].tolist()[0]
-    epoch = Time(epoch, format='mjd')
-    mid_exposure = epoch.isot
-
-    ra_field = group['RA_IMAGE'].tolist()[0]
-    dec_field = group['DEC_IMAGE'].tolist()[0]
-
-    query_url = 'http://vo.imcce.fr/webservices/skybot/skybotconesearch_query.php?-ep=%s&-ra=%s&-dec=%s'\
-                '&-bd=%s&-mime=votable&-output=basic&-loc=%s&-filter=0&-objFilter=111&&-from=AF&-top=' %\
-                (mid_exposure, ra_field, dec_field, fov, obs_code)
-
-    output_filename = 'skybot_%s_%s_%s.xml' % (ra_field, dec_field, mid_exposure)
-    output_filename = os.path.join(target_dir, output_filename)
-
-    if not args.skybot and os.path.isfile(output_filename):
-            log.debug('\nAlready queried %s, skipping download..' % output_filename)
-    else:
-        try:
-            urllib.request.urlretrieve(query_url, output_filename)
-        except urllib.error.URLError as err:
-            log.info('SkyBoT query failed: {0}'.format(err))
-
-    # ------
-    # Cross-match query results with sources from that epoch
-    try:
-        # Temporarily disable warnings as otherwise astropy.io.votable.tree
-        # will spam the output with xml warnings
-        import warnings
-        warnings.filterwarnings('ignore')
-        skybot_sources = parse_single_table(output_filename).array
-        warnings.filterwarnings('default')
-        skybot_sources = pd.DataFrame(np.ma.filled(skybot_sources))
-
-    except (IndexError, FileNotFoundError):
-        # No matches in SkyBoT database were found or error in query
-        skybot_sources = pd.DataFrame({'number': [''],
-                                       'name': [''],
-                                       'magV': [0],
-                                       '_raj2000': [0],
-                                       '_decj2000': [0],
-                                       'dracosdec': [0],
-                                       'ddec': [0],
-                                       'class': ['']})
-
-    # Call actual cross-matching method on single source detections
-    group = group.apply(_cross_match, args=(skybot_sources, crossmatch_radius), axis=1)
-
-    return group
-
-
-def _cross_match(source, skybot_sources, crossmatch_radius):
+def _cross_match(source, skybot, radius):
     '''
         Cross-matching is applied to single rows in database.  Checks for matches
         and adds SkyBoT source parameters to database if a match is found.
@@ -266,29 +191,30 @@ def _cross_match(source, skybot_sources, crossmatch_radius):
         input
         ------
         source - pd.Series, single source detection parameters
-        skybot_sources - pd.DataFrame, parameters of all SkyBoT sources in exposure
-        crossmatch_radius - float, crossmatch radius in arcsec
+        skybot - pd.DataFrame, parameters of all SkyBoT sources in exposure
+        radius - float, crossmatch radius in arcsec
 
         returns
         source - pd.Series, single source detection parameters with SkyBot parameters added
     '''
 
     # Find SkyBoT source that is closest in angular separation to source
-    distances_to_source = abs(np.sqrt((skybot_sources['_raj2000'] - source['ALPHA_J2000'])**2 +\
-                                      (skybot_sources['_decj2000'] - source['DELTA_J2000'])**2))
+    distances_to_source = abs(np.sqrt((skybot['RA'] - source['ALPHA_J2000'])**2 +\
+                                      (skybot['DEC'] - source['DELTA_J2000'])**2))
+    if distances_to_source.min() <= radius:
+        skybot_match = skybot.iloc[distances_to_source.values.argmin()]
 
-    if distances_to_source.min() <= crossmatch_radius:
-
-        skybot_match = skybot_sources.iloc[distances_to_source.values.argmin()]
-
-        source['SKYBOT_NUMBER']  = skybot_match['num']
-        source['SKYBOT_NAME']    = skybot_match['name']
-        source['SKYBOT_MAG']     = skybot_match['magV']
-        source['SKYBOT_ALPHA']   = skybot_match['_raj2000']
-        source['SKYBOT_DELTA']   = skybot_match['_decj2000']
-        source['SKYBOT_PMALPHA'] = skybot_match['dracosdec']
-        source['SKYBOT_PMDELTA'] = skybot_match['ddec']
-        source['SKYBOT_CLASS']   = skybot_match['class']
+        source['SKYBOT']         = True
+        source['SKYBOT_NUMBER']  = skybot_match['#Num']
+        source['SKYBOT_NAME']    = skybot_match['Name']
+        source['SKYBOT_MAG']     = skybot_match['Mv']
+        source['SKYBOT_ALPHA']   = skybot_match['RA']
+        source['SKYBOT_DELTA']   = skybot_match['DEC']
+        source['SKYBOT_PMALPHA'] = skybot_match['dRA(arcsec/h)']
+        source['SKYBOT_PMDELTA'] = skybot_match['dDEC(arcsec/h)']
+        source['SKYBOT_CLASS']   = skybot_match['Class']
+    else:
+        source['SKYBOT'] = False
 
     return source
 
@@ -328,22 +254,24 @@ def crossmatch_skybot(sources, settings, log, paths, args):
     '''
     log.info('\nCross-matching SSO candidates with SkyBoT..')
 
-
-    target_dir = paths['skybot']
-    fov        = settings['FOV_DIMENSIONS']
-    obs_code   = settings['OBSERVATORY_CODE']
+    skybot = pd.read_csv(os.path.join(paths['skybot'], 'skybot_all.csv'))
     crossmatch_radius = settings['CROSSMATCH_RADIUS'] / 3600 # convert from arcsecond to degrees
 
+    skybot_columns = ['SKYBOT', 'SKYBOT_NAME', 'SKYBOT_NUMBER', 'SKYBOT_CLASS', 'SKYBOT_MAG',
+                      'SKYBOT_ALPHA', 'SKYBOT_DELTA', 'SKYBOT_PMALPHA', 'SKYBOT_PMDELTA']
 
     # The default value for the SkyBoT columns are empty strings
     sources = pd.concat([sources, pd.DataFrame('', sources.index,
-                        ['SKYBOT_NAME', 'SKYBOT_NUMBER', 'SKYBOT_CLASS', 'SKYBOT_MAG',
-                         'SKYBOT_ALPHA', 'SKYBOT_DELTA', 'SKYBOT_PMALPHA', 'SKYBOT_PMDELTA'])], axis=1)
+                        skybot_columns)], axis=1)
+
 
     # Cross-match for each mid-exposure epoch
-    sources = sources.groupby('DATE-OBS').apply(_query_and_cross_match, target_dir=target_dir,
-                                                    fov=fov, obs_code=obs_code, log=log, args=args,
-                                                    crossmatch_radius=crossmatch_radius)
+    for mid_exp_mjd, detections in sources.groupby('MID_EXPOSURE_MJD'):
+
+        skybot_detections = skybot[skybot.EPOCH == Time(mid_exp_mjd, format='mjd').isot]
+        sources.loc[detections.index, skybot_columns] = detections.apply(_cross_match, skybot=skybot_detections,
+                                                                                       radius=crossmatch_radius, axis=1)
+
 
     # For each SSO, check if multiple matches were found
     # If so, choose the match which is most co-linear with the measured proper motion (minimize the angles)
@@ -368,10 +296,8 @@ def crossmatch_skybot(sources, settings, log, paths, args):
                 best_match_number = sources.loc[best_match, 'SKYBOT_NUMBER']
 
                 sources.loc[source[source.SKYBOT_NAME != best_match_name].index,
-                                  ['SKYBOT_NAME', 'SKYBOT_NUMBER', 'SKYBOT_MAG',
-                                   'SKYBOT_ALPHA', 'SKYBOT_DELTA', 'SKYBOT_PMALPHA',
-                                   'SKYBOT_PMDELTA', 'SKYBOT_CLASS']] = [best_match_name, best_match_number,
+                                  skybot_columns] = [best_match_name, best_match_number,
                                                                          '', '', '', '', '', '']
 
-    log.info(' %i matched.\n' % len(set(sources[sources['SKYBOT_NAME']!='']['SOURCE_NUMBER'])))
+    log.info(' %i matched.\n' % len(set(sources[sources.SKYBOT]['SOURCE_NUMBER'])))
     return sources

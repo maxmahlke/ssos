@@ -3,6 +3,11 @@ import logging
 import os
 import sys
 import time
+import warnings
+
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+import pandas as pd
 
 
 def init_argparse():
@@ -22,8 +27,11 @@ def init_argparse():
     parser.add_argument('-c', '--config', action='store', dest='set_up', nargs=1,
                         help='Path to configuration file')
 
-    parser.add_argument('-t', '--target', action='store', dest='target', nargs=1,
-                        help='Target directory to save fits files. If no target given, writing to CWD')
+    parser.add_argument('-d', '--default', action='store_true',
+                        help='Copy default setup files to CWD')
+
+    parser.add_argument('-i', '--inspect', action='store_true',
+                        help='Launch visual inspection mode on SSO candidates sample')
 
     parser.add_argument('-l', '--log', action='store', dest='log', nargs=1,
                         help='Set the logging level. Valid arguments are DEBUG, INFO, WARNING, ERROR,\
@@ -31,6 +39,9 @@ def init_argparse():
 
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='Suppress logging to console')
+
+    parser.add_argument('-t', '--target', action='store', dest='target', nargs=1,
+                        help='Target directory to save fits files. If no target given, writing to CWD')
 
     parser.add_argument('--sex', action='store_true',
                         help='Force SExtractor runs')
@@ -153,3 +164,82 @@ def create_target_dir(args):
 
     return target_dir, paths
 
+
+def query_skybot(epoch, ra, dec, fov, obs_code):
+    '''
+    Retrieves the SkyBoT query for the specified parameters
+
+    input
+    ------
+    epoch - float, mid-exposure epoch in MJD
+    ra - float, right ascension in degree
+    dec - float, declination in degree
+    fov - str, value of FOV_DIMENSIONS parameter
+    obs_code - str, value of OBSERVATORY_CODE parameter
+
+    return
+    -------
+    skybot - pd.DataFrame, skybot sources in the FoV. Empty dataframe if no sources
+    '''
+
+    obs = {
+        '-ep': str(epoch), '-ra': str(ra),
+        '-dec': str(dec),  '-bd': fov,
+        '-mime': 'text',  '-loc': obs_code,
+        '-output': 'obs'
+    }
+
+    url = 'http://vo.imcce.fr/webservices/skybot/skybotconesearch_query.php?'
+    url = '&'.join([url, *['='.join([k, v]) for k, v in obs.items()]])
+
+    skybot = pd.read_csv(url, skiprows=2, delimiter='|')
+
+    if skybot.empty:
+        print(skybot.columns)
+        return skybot
+    # Fix column names
+    skybot = skybot.rename({col: col.replace(' ', '') for col in skybot.columns},
+                           axis=1)
+
+    # Convert RA and DEC columns to degree
+    skybot['RA'] = skybot.apply(lambda x: SkyCoord(x['RA(h)'], x['DE(deg)'], frame='icrs', unit=(u.hourangle, u.deg)).ra.deg, axis=1)
+    skybot['DEC'] = skybot.apply(lambda x: SkyCoord(x['RA(h)'], x['DE(deg)'], frame='icrs', unit=(u.hourangle, u.deg)).dec.deg, axis=1)
+    skybot.drop(['RA(h)', 'DE(deg)'], inplace=True, axis=1)
+
+    skybot['EPOCH'] = epoch
+
+    return skybot
+
+
+def unpack_header_kw(hdus, keywords, try_first=0):
+    '''
+    Looks up keyword values in FITS headers. Iterates over
+    extensions until keyword is found, else returns False
+
+    hdus - HDUList, exposure headers
+    keywords - string or list, keywords to look up
+    try_first - header index to look up first
+
+    returns
+    ----
+    vals - single parameter value or list of parameter values
+    '''
+    vals = []
+
+    kws = [keywords] if not isinstance(keywords, list) else keywords
+
+    for kw in kws:
+        for hdu_ind in set([try_first, *range(len(hdus))]):
+            try:
+                hdu = hdus[hdu_ind]
+                vals.append(hdu.header[kw])
+                break
+            except (IndexError, KeyError):
+                pass
+        else:
+            vals.append(False)
+
+    if not isinstance(keywords, list):
+        return vals[0]
+
+    return vals

@@ -4,7 +4,14 @@
 The ``ssos`` Pipeline
 #####################
 
-Recover astrometry and photometry of Solar System Objects (SSOs) in wide-field imaging surveys.
+.. raw:: html
+
+    <embed>
+    <a href="http://ascl.net/1901.006"><img src="https://img.shields.io/badge/ascl-1901.006-blue.svg?colorB=262255" alt="ascl:1901.006" /></a>
+    <a href="https://github.com/maxmahlke/ssos"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Logo.png" width="75px"/></a>
+
+
+Detect, identify, and characterize known and unknown Solar System Objects (SSOs) in astronomical surveys.
 
 .. image:: imgs/sso_banner.png
     :align: center
@@ -13,18 +20,18 @@ Recover astrometry and photometry of Solar System Objects (SSOs) in wide-field i
 
 
 Introduction to the ``ssos`` Pipeline
-================================
-The ``ssos`` Pipeline is a versatile tool to detect, identify, and characterize Solar System Objects in consecutive exposures of the sky. Best use cases are wide-field imaging surveys such as the `Kilo-Degree Survey <http://kids.strw.leidenuniv.nl/>`_, for which the pipeline was `originally designed <https://www.aanda.org/articles/aa/ref/2018/02/aa30924-17/aa30924-17.html>`_.
+=====================================
+The ``ssos`` Pipeline is a versatile tool to detect, identify, and characterize Solar System Objects in consecutive exposures of the sky. A large configurability allow the application of ``ssos`` to almost any kind of astronomical images, Best use cases are wide-field imaging surveys such as the `Kilo-Degree Survey <http://kids.strw.leidenuniv.nl/>`_, for which the pipeline was `originally designed <https://www.aanda.org/articles/aa/ref/2018/02/aa30924-17/aa30924-17.html>`_.
 
 The pipeline is written in ``python 3``. The three main steps are
 
-* identifying all sources in all images using `SExtractor <https://www.astromatic.net/software/sextractor>`_
-* cross-matching all sources between all images using `SCAMP <https://www.astromatic.net/software/scamp>`_
-* separating the SSOs from other sources such as stars, galaxies, artifacts, using a filter chain
+* detecting all sources in all images using `SExtractor <https://www.astromatic.net/software/sextractor>`_
+* associating sources detections between all images using `SCAMP <https://www.astromatic.net/software/scamp>`_, to build a complete source catalogue
+* separating the asteroids from other sources such as stars, galaxies, artifacts using a filter chain
 
-Additional analyses can be done, e.g. cross-matching SSO candidates with the `SkyBoT <http://vo.imcce.fr/webservices/skybot/>`_ database or creating cutouts with `SWarp <https://www.astromatic.net/software/swarp>`_.
+Additional analyses can be done, e.g. identifying known SSOs in the candidates sample by cross-matching with the `SkyBoT <http://vo.imcce.fr/webservices/skybot/>`_ database or creating cutouts with `SWarp <https://www.astromatic.net/software/swarp>`_.
 
-The strength of the pipeline lies in the large degree of versatility. All steps can be adapted to the images at hand using configuration files. The install process and survey-specific set-ups are described in the `Getting Started <setup.html>`_.
+The strength of the pipeline lies in the large degree of versatility. All steps can be adapted to the images at hand using configuration files. The install process and the typical workflow are described in the `Getting Started <setup.html>`_.
 
 ----------------
 

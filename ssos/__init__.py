@@ -1,11 +1,11 @@
 name = 'ssos'
-__version__ = '1.2.2'
+__version__ = '1.2.3'
 
 
 GREETING = '''
-       *       +      ssos pipeline %s
+       *       +      ssos %s
    +        x
-        '             https://sso-pipeline.readthedocs.io
+        '             https://ssos.readthedocs.io
 *   +     _.::'   |
         :_.'    - o - ssos --default : Copy default settings to CWD
 |                 |   ssos --help    : Print detailed help

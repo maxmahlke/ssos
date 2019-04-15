@@ -1,3 +1,14 @@
+1.2.3
+---
+* Inspection mode added: using `ssos -i|--inspect path/to/analysis`, SSO candidates can quickly be visually inspected and quickly classified into SSO / Unknown / Artifact using the arrow keys
+* FOV_DIMENSIONS can now be set automatically by pipeline
+* The DATE-OBS keyword can now be passed in either ISOT or MJD format
+* edited the GREETING to point to correct documentation
+* no longer creating target directory if the images cannot be found
+* Fixed a bug in the SWarp cutout creation where it would chose the wrong image extension if SCI_EXTENSION is 0
+* Fixed the cutout images filename scheme so that they are now correctly ordered by epoch when calling from the command line
+* Revisited the SkyBoT query: It is now executed at the beginning of the pipeline and states the amount of all known SSOs in the image. A brief overview is printed to the console.
+
 1.2.2
 ---
 * default.ssos is now properly included in the pip install

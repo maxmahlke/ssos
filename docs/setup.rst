@@ -49,7 +49,7 @@ After installing, you can run the script ``ssos`` from anywhere in your system.
 Pipeline Setting Files
 ======================
 
-The default ``default.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/ssos/default.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and default values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.rst>`_ and `Implementation <implementation.rst>`_ pages.
+The default ``default.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/ssos/default.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and default values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.html>`_ page.
 
 .. note::
     The default configuration file ``default.ssos`` and the auxiliary SExtractor, SCAMP, and SWARP setup files are included in the ``python`` package and can be copied to the current working directory using the :bash:`ssos -d` or :bash:`ssos --default` syntax.
@@ -170,7 +170,7 @@ The default ``default.ssos`` file can be `found here <https://github.com/maxmahl
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     | `OBSERVATORY_CODE`    | string  |        500                      | `IAU Observatory Code`_                                                   |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `FOV_DIMENSIONS`      | string  |       1x1.5                     | Dimensions of exposure field-of-view in degrees, see `SkyBoT`_.           |
+    | `FOV_DIMENSIONS`      | string  |       0x0                       | Dimensions of exposure field-of-view in degrees, see `SkyBoT`_.           |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     | `EXTRACT_CUTOUTS`     | bool    |     True | False                | Turn cutout extraction with SWARP on or off. See :ref:`optional`.         |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
@@ -187,10 +187,41 @@ The configuration file can be formatted with tabs and spaces. Comments are marke
 .. note:: The pipeline script first checks if the `-c` flag is pointing to a configuration file. If not, it looks for a file called `default.ssos` in the current working directory. If no file is found, the hard-coded default values are used. Any parameter can be overwritten temporarily by using the appropriate flag, see :ref:`Command-Line API <Command-Line API>`.
 
 
-Survey-Specific Changes
-=======================
+Step-by-step workflow
+=====================
 
-It is unlikely that the pipeline will give you the optimum result (clean and complete sample of SSOs) right out-of-the-box. Apart from the ``default.ssos`` parameters listed above, you likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
+It is unlikely that the pipeline will give you the optimum result (clean and complete sample of SSOs) right out-of-the-box. Before running ``ssos`` on thousands of images from an observation campaign, it is helpful to pick test images taken close to the ecliptic to find the right settings. Outlined here is a typical workflow to set-up the pipeline for batch processing of images. The order of these steps can be varied in some cases. Further help can be found on the `Tips & Tricks & Troubleshooting <misc.html>`_ page.
+
+1. Create a directory to contain the configuration files. In the directory, run
+
+.. code-block:: bash
+
+    $ ssos --default
+
+to copy the default configurations files into this directory. Adjust the `SEX_CONFIG`, `SEX_FILTER`, `SEX_PARAMS`, `SEX_NNW`, `SCAMP_CONFIG`, `SWARP_CONFIG` parameters in the ``ssos`` config file to point to the just created files.
+
+2. Open some images in `DS9` and use the `Analysis` functionality to overplot known SkyBoT SSOs in the FoV. Make note of how many known SSOs are visible in how many images - these numbers will be a goal to aim for in the following fine-tuning steps
+
+3. Adjust the image specific keywords in the ``ssos`` config file: `RA`, `DEC`, `OBJECT`, `DATE-OBS`, `FILTER`, `EXPTIME`. Insert the corresponding header keyword names. You may have to create or adjust this keywords for the pipeline using e.g. `wcstools`
+
+4. Run the pipeline in default settings. Use `topcat` to inspect the output catalogues and find out why known SSOs were missed. You can load all catalogues into topcat and overplot them in RA-Dec space.
+
+5. If an SSO is not in the full catalogue created by SCAMP, you have to adjust the SExtractor settings. To quickly test different settings, you can run the pipeline again using the debugging flag `-l DEBUG` and copy the necessary SExtractor command that is printed to the console. Using `Aladin`, you can overplot the SExtractor catalogues and the images and see why source detections are missing or were rejected.
+
+6. If an SSO is in the full catalogue but not in the final sample, SCAMP may have mis-associated source detections. Open the full catalogue and click through the SSO detections in the graphical display in RA-Dec space. Do they share the same `SOURCE_NUMBER`? You may have to adjust the `CROSSMATCH_RADIUS` parameter.
+
+7. If an SSO is correctly linked up by SCAMP, it is removed by the filter pipeline. Adjust the settings in the ``ssos`` config file.
+
+8. Inspect the output candidates: After running ``ssos`` with `EXTRACT_CUTOUTS` set to `True`, you can quickly inspect the output candidates sample by running
+
+.. code-block:: bash
+
+    $ ssos --inspect path/to/output/folder
+
+
+where the output folder is the directory which contains the `cats` and `cutouts` directories. You are then shown videos of the recovered sources one after the other and can quickly classify them using the arrow keys: "left arrow" for artifact, "right arrow" for asteroid, "up arrow" for unknown/unclear. These classifications are saved in the output `csv` database. If a candidate was matched to a SkyBoT source, its designation is printed in the upper left part of the video.
+
+Apart from the ``default.ssos`` parameters listed above, you likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
 
 
 ``ssos.sex``

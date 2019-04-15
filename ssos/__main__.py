@@ -23,6 +23,12 @@ if sys.argv[1] in ['-d', '--default']:
                                    os.path.join(path_to_module, 'default.ssos')))
     sys.exit()
 
+elif sys.argv[1] in ['-i', '--inspect']:
+    from ssos.inspect import inspectCutouts
+    inspectCutouts(sys.argv[2:])
+    sys.exit()
+
+
 from ssos.core import Pipeline
 
 
@@ -41,12 +47,12 @@ def main():
     # ------
     # Run SCAMP on SExtractor catalogues
     if pipeline.settings['REMOVE_REF_SOURCES']:
-    
+
         pipeline.run_SCAMP(crossid_radius=1, full_name='full_stars.cat',
                            merged_name='merged_stars.cat', keep_refcat=True,
                            adjust_SExtractor_and_aheader=True)
         pipeline.run_SCAMP(crossid_radius=pipeline.args.CROSSID_RADIUS, solve_astronomy=False, pattern_matching=False)
-    
+
     else:
         pipeline.run_SCAMP(crossid_radius=pipeline.args.CROSSID_RADIUS)
 

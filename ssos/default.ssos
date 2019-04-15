@@ -3,12 +3,12 @@
 # ------
 # Image Parameters
 
-SCI_EXTENSION          All                       # Science Extension of FITS file
+SCI_EXTENSION          All                     # Science Extension of FITS file
 WEIGHT_IMAGES          False                   # Absolute path to weight images for SExtractor run
-RA                     RA                      # Header keyword of right ascension in degree
-DEC                    DEC                     # Header keyword of declination in degree
+RA                     CRVAL1                  # Header keyword of right ascension in degree
+DEC                    CRVAL2                  # Header keyword of declination in degree
 OBJECT                 OBJECT                  # Header OBJECT keyword
-DATE-OBS               DATE-OBS                # Header keyword for observation date in ISOT format
+DATE-OBS               DATE-OBS                # Header keyword for start of observation in ISOT or MJD format
 FILTER                 FILTER                  # Header keyword for observation filter/band
 EXPTIME                EXPTIME                 # Header keyword for exposure time
 
@@ -40,7 +40,7 @@ DETECTIONS             1,2,3                   # Number of detections to filter
 FILTER_PM              True                    # Filter by proper motion range
 PM_LOW                 0                       # Lower proper motion limit / "/h
 PM_UP                  300                     # Upper proper motion limit / "/h
-PM_SNR                 0.5                      # Lower limit of proper motion SNR
+PM_SNR                 0.5                     # Lower limit of proper motion SNR
 
 FILTER_PIXEL           True                    # Filter by pixel margin
 DELTA_PIXEL            2                       # Lower limit of pixel margin
@@ -64,7 +64,7 @@ MAG_LIMITS             -99,99                  # Magnitude limits applied to bri
 CROSSMATCH_SKYBOT      True                    # Cross-match sources with SkyBoT
 CROSSMATCH_RADIUS      10                      # Upper distance in " to count as match
 OBSERVATORY_CODE       500                     # IAU Observatory code for SkyBoT query
-FOV_DIMENSIONS         1.5x1.5                 # Size of query region / deg
+FOV_DIMENSIONS         0x0                     # Edge lengths of query region / deg, 0x0 - automatically
 
 EXTRACT_CUTOUTS        True                    # Save cutouts of source detections
 CUTOUT_SIZE            256                     # Cutout size in pixel

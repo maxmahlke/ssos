@@ -5,6 +5,7 @@ import sys
 
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
+from astropy.io.votable import parse_single_table
 from astropy.table import Table
 from astropy.time import Time
 import astropy.units as u
@@ -18,6 +19,9 @@ from ssos.opt import crossmatch_skybot
 from ssos.utils import create_target_dir
 from ssos.utils import init_argparse
 from ssos.utils import init_logger
+from ssos.utils import query_skybot
+from ssos.utils import unpack_header_kw
+
 
 
 FILTER_STEPS = {
@@ -44,16 +48,19 @@ class Pipeline:
 
         # Preparations: Handling of command line arguments
         self.args = init_argparse()
-        self.target_dir, self.paths = create_target_dir(self.args)
-        self.log, self.log_file, self.start_time = init_logger(self.args, self.paths['logs'])
-        self.log.info('\n\t--- SSO Recovery Pipeline ---\t\t--- {:s} ---\n\n'
-                      .format(time.strftime('%Y/%m/%d %H:%M:%S', self.start_time)))
+
 
         # Assert that images are found and contain the required header keywords
-        self.images = [os.path.join(self.paths['images'], image) for image in
-                       os.listdir(self.paths['images']) if image.endswith('.fits')]
+        self.images = [os.path.join(os.path.abspath(self.args.fields[0]), image) for image in
+                       os.listdir(os.path.abspath(self.args.fields[0])) if image.endswith('.fits')]
         assert len(self.images) > 0, 'No images found in %s! Ensure that they have a .fits'\
-                                     ' extension' % self.paths['images']
+                                     ' extension' % os.path.abspath(self.args.fields[0])
+
+        self.target_dir, self.paths = create_target_dir(self.args)
+        self.log, self.log_file, self.start_time = init_logger(self.args, self.paths['logs'])
+        self.log.info('\n\t--- The ssos Pipeline ---\t\t--- {:s} ---\n\n'
+                      .format(time.strftime('%Y/%m/%d %H:%M:%S', self.start_time)))
+
 
         # Reading and checking the settings
         self.settings = self._set_settings()
@@ -158,31 +165,26 @@ class Pipeline:
                     settings[param] = False # treat it as 'None provided'
                 else:
                     raise PipelineSettingsException('%s value invalid' % param)
+        if self.settings['SCI_EXTENSION']:
+            self.sci_ext = self.settings['SCI_EXTENSION'][0]
+        else:
+            self.sci_ext = 0
 
-        # Check primary and science image header keywords
+        # Check one image header for keyword presence
         with fits.open(self.images[0]) as exposure:
-
-            self.primary_header = exposure[0].header
-
-            if not settings['SCI_EXTENSION']:
-                try:
-                    self.science_header = exposure[1].header # use first extension
-                except IndexError:
-                    self.science_header = exposure[0].header # image data in primary HDU
-            else:
-                self.science_header = exposure[self.settings['SCI_EXTENSION'][0]].header
-
             kws = ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']
-
             for kw in kws:
-                try:
-                    _ = self.primary_header[self.settings[kw]]
-                except KeyError:
+                if not unpack_header_kw(exposure, self.settings[kw], self.sci_ext):
+                    raise PipelineSettingsException('Could not find keyword %s in FITS header.'\
+                                                    ' Is the SCI_EXTENSION correct?' % self.settings[kw])
+                if kw == 'DATE-OBS':
+                    # Find format of DATE-OBS keyword
                     try:
-                        _ = self.science_header[self.settings[kw]]
-                    except KeyError:
-                        raise PipelineSettingsException('Could not find keyword %s in FITS header.'\
-                                                        ' Is the SCI_EXTENSION correct?' % self.settings[kw])
+                        Time(unpack_header_kw(exposure, kw, try_first=self.sci_ext), format='isot')
+                        self.date_obs_fmt = 'isot'
+                    except ValueError:
+                        self.date_obs_fmt = 'mjd'
+
 
         # Check that config files exist
         for file in ['SEX_CONFIG', 'SEX_PARAMS', 'SEX_NNW', 'SEX_FILTER',
@@ -230,11 +232,8 @@ class Pipeline:
                 raise PipelineSettingsException('Could not convert %s value to float'
                                                 % param)
             if param == ['R_SQU_M']:
-                try:
-                    assert 0 <= settings[param] <= 1
-                except AssertionError:
-                    raise PipelineSettingsException('The %s parameter has to be in range [0 - 1]'
-                                                     % param)
+                assert 0 <= settings[param] <= 1, 'The %s parameter has to be in range [0 - 1]' % param
+
         if settings['FILTER_BRIGHT_SOURCES']:
             # Evaluate bright-sources catalogue path
             if settings['BRIGHT_SOURCES_CAT'] == 'REFCAT':
@@ -255,20 +254,103 @@ class Pipeline:
 
     def _print_field_info(self):
         ''' Prints RA, DEC, and OBJECT keywords to log '''
-        kws = {}
-        for kw in ['OBJECT', 'RA', 'DEC']:
+        with fits.open(self.images[0]) as exposure:
+            ra, dec, object = unpack_header_kw(exposure, ['RA', 'DEC', 'OBJECT'], try_first=self.sci_ext)
 
-            try:
-                kws[kw] = self.primary_header[self.settings[kw]]
-            except KeyError:
-                kws[kw] = self.science_header[self.settings[kw]]
-
-        ecli_lat = SkyCoord(kws['RA'], kws['DEC'], frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
+        ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
 
         self.log.info('\t|\t'.join(['%i Exposures' % len(self.images),
-                                    '%s' % kws['OBJECT'],
+                                    '%s' % object,
                                     '%.2fdeg Ecliptic Latitude\n\n' % ecli_lat]))
 
+        # Get number of known SSOs in FoV from SkyBoT
+        if self.settings['CROSSMATCH_SKYBOT']:
+            self.log.info('Querying SkyBoT for known SSOs in FoV..\n')
+
+            if not self.args.skybot and \
+               os.path.isfile(os.path.join(self.paths['skybot'], 'skybot_all.csv')):
+
+               self.skybot = pd.read_csv(os.path.join(self.paths['skybot'], 'skybot_all.csv'))
+
+            else:
+                self.skybot = pd.DataFrame()
+
+                for img in self.images:
+                    with fits.open(img) as exp:
+                        ra, dec, date_obs, texp = unpack_header_kw(exp, [self.settings['RA'], self.settings['DEC'],
+                                                                         self.settings['DATE-OBS'], self.settings['EXPTIME']], self.sci_ext)
+
+                        mid_epoch = (Time(date_obs, format=self.date_obs_fmt) + float(texp) / 2 * u.second).isot
+
+                        if self.settings['FOV_DIMENSIONS'] == '0x0':
+
+                            # Determine exposure FoV
+                            naxis1, naxis2, cdelt1, cdelt2 = unpack_header_kw(exp, ['NAXIS1', 'NAXIS2', 'CDELT1', 'CDELT2'], self.sci_ext)
+
+                            if not cdelt1 or not cdelt2:
+                                cd11, cd12, cd21, cd22 = unpack_header_kw(exp, ['CD1_1', 'CD1_2', 'CD2_1', 'CD2_2'], self.sci_ext)
+                                dra  = naxis1 * abs(cd11) + naxis2 * abs(cd12)
+                                ddec = naxis1 * abs(cd21) + naxis2 * abs(cd22)
+
+                            else:
+                                dra = naxis1 * cdelt1
+                                ddec = naxis2 * cdelt2
+
+                            # Ensure coverage by adding CROSSMATCH_RADIUS
+                            fov = '{:.1f}x{:.1f}'.format(round(dra  + self.settings['CROSSMATCH_RADIUS'] / 60, 1),
+                                                         round(ddec + self.settings['CROSSMATCH_RADIUS'] / 60, 1))
+
+                        else:
+                            fov = self.settings['FOV_DIMENSIONS']
+
+                        result = query_skybot(mid_epoch, ra, dec, fov,
+                                              self.settings['OBSERVATORY_CODE'])
+                        if not result.empty:
+                            self.skybot = self.skybot.append(result)
+
+                if not self.skybot.empty:
+                    self.skybot.to_csv(os.path.join(self.paths['skybot'], 'skybot_all.csv'), index=False)
+
+            if not self.skybot.empty:
+                # Print gimmicky SkyBoT info
+                bins = np.arange(np.floor(min(self.skybot.Mv)),
+                                 np.ceil(max(self.skybot.Mv)), 0.5)
+
+                counts = pd.cut(self.skybot['Mv'], bins).value_counts()
+                counts.sort_index(inplace=True)
+
+                magnitudes = '  '.join([str(i) for i in range(int(min(bins)),
+                                                             int(np.ceil(max(bins))) + 1
+                                                             )])
+                # construct bar chart top-down
+                bars = []
+                bar_height = 7
+
+                for i in range(1, bar_height):
+                    bar = ' '
+                    for count in counts:
+                        if count >= max(counts.values) * (bar_height-i)/bar_height:
+                            bar += '##'
+                        else:
+                            bar += '  '
+                    bars.append(bar)
+                # bottom bar
+                bar = ' '
+                for count in counts:
+                    if count > 0:
+                        bar += '##'
+                    else:
+                        bar += '  '
+                bars.append(bar)
+
+                self.log.info('\nSkyBoT: %i SSOs with %i detections\n'
+                              '\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n %s\n%sMv\n'
+                               % (len(set(self.skybot.Name)),
+                                  len(self.skybot),
+                                  *bars, magnitudes,
+                                  ' ' * int(len(magnitudes) / 2)))
+            else:
+                self.log.info('No known SSOs returned by SkyBoT.\n')
 
     def _run_SExtractor_on_single_image(self, image, extension):
         '''
@@ -293,20 +375,19 @@ class Pipeline:
         if extension is not False:
             image_ext = image + '[%i]' % extension
             cat += '_%i.cat' % extension
-            sci_extension = extension
+            ext = extension
 
         else:
             image_ext = image
             cat += '.cat'
-            sci_extension = 1
+            ext = 1
 
         if not self.args.sex and os.path.isfile(cat):
             self.log.debug('SExtractor catalog %s already exists! Skipping this sextraction..\n' % cat)
+
             with fits.open(image) as exposure:
-                try:
-                    date_obs = exposure[sci_extension].header[self.settings['DATE-OBS']]
-                except (IndexError, KeyError): # check primary header
-                    date_obs = exposure[0].header[self.settings['DATE-OBS']]
+                date_obs = unpack_header_kw(exposure, self.settings['DATE-OBS'], self.sci_ext)
+
             return cat, date_obs
 
         sex_args = {
@@ -349,18 +430,12 @@ class Pipeline:
         with fits.open(image) as exposure:
             # Make .ahead file with the EPOCH in MJD for SCAMP
             # Following http://www.astromatic.net/forum/showthread.php?tid=501
-            try:
-                date_obs = exposure[sci_extension].header[self.settings['DATE-OBS']]
-            except (KeyError, IndexError): # check primary header
-                date_obs = exposure[0].header[self.settings['DATE-OBS']]
-
-            mjd = Time(date_obs, format='isot').mjd
+            date_obs = unpack_header_kw(exposure, self.settings['DATE-OBS'], self.sci_ext)
+            mjd = Time(date_obs, format=self.date_obs_fmt).mjd
 
             with open(os.path.splitext(cat)[0] + '.ahead', 'w+') as file:
-
                 for hdu in exposure:
                     file.write('MJD-OBS = %.6f\nEND\n' % mjd)
-
         return cat, date_obs
 
 
@@ -442,7 +517,8 @@ class Pipeline:
             scamp_args['overwrite_params']['CROSSID_RADIUS'] = str(crossid_radius)
 
         if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
-            self.log.info('\nReading SCAMP catalogues from file..\t')
+            if not pattern_matching: # suppress this message in case SCAMP is run twice
+                self.log.info('\nReading SCAMP catalogues from file..\n')
             scamp_from_file = True
 
         else:
@@ -481,7 +557,6 @@ class Pipeline:
 
         # Add flag to dataframe
         self.sources['FLAGS_SSOS'] = 0
-        self.log.info('Done.\n')
 
 
     def adjust_SExtractor_catalogues(self):
@@ -655,13 +730,10 @@ class Pipeline:
             # Add exposure keywords
             with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
                 for prop in ['OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME', 'RA_IMAGE', 'DEC_IMAGE']:
-                    try:
-                        self.sources.loc[group.index, prop]   = exposure[extension].header[self.settings[prop.split('_')[0]]]
-                    except (IndexError, KeyError): # check primary header
-                        self.sources.loc[group.index, prop]   = exposure[0].header[self.settings[prop.split('_')[0]]]
+                    self.sources.loc[group.index, prop] = date_obs = unpack_header_kw(exposure, self.settings[prop.split('_')[0]], extension)
 
-        self.sources['MID_EXPOSURE_MJD'] = self.sources.apply(lambda x: (Time(x['DATE-OBS'], format='isot') +
-                                                                        float(x['EXPTIME']) / 2 * u.second).mjd, axis=1)
+        self.sources['MID_EXPOSURE_MJD'] = self.sources.apply(lambda x: ( Time(x['DATE-OBS'], format=self.date_obs_fmt) +
+                                                                       float(x['EXPTIME']) / 2 * u.second).mjd, axis=1)
 
 
     def execute_analysis(self, step_name):
