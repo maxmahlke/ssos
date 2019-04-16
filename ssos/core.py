@@ -517,7 +517,7 @@ class Pipeline:
             scamp_args['overwrite_params']['CROSSID_RADIUS'] = str(crossid_radius)
 
         if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
-            if not pattern_matching: # suppress this message in case SCAMP is run twice
+            if pattern_matching: # suppress this message in case SCAMP is run twice
                 self.log.info('\nReading SCAMP catalogues from file..\n')
             scamp_from_file = True
 

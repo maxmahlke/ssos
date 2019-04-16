@@ -1,3 +1,7 @@
+1.2.4
+---
+* Bugfix in fixed aperture extraction method
+
 1.2.3
 ---
 * Inspection mode added: using `ssos -i|--inspect path/to/analysis`, SSO candidates can quickly be visually inspected and quickly classified into SSO / Unknown / Artifact using the arrow keys

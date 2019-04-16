@@ -47,7 +47,6 @@ def main():
     # ------
     # Run SCAMP on SExtractor catalogues
     if pipeline.settings['REMOVE_REF_SOURCES']:
-
         pipeline.run_SCAMP(crossid_radius=1, full_name='full_stars.cat',
                            merged_name='merged_stars.cat', keep_refcat=True,
                            adjust_SExtractor_and_aheader=True)

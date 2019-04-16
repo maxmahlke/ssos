@@ -116,9 +116,8 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
             raise PipelineSettingsException('No detection of candidate %i found in reference filter %s.'\
                                             % (number, reference_filter))
 
-        detection_image = os.path.join(cutout_dir, '_'.join([str(number),
-                                                             str(reference_detection['CATALOG_NUMBER'])])
-                                                             + '.fits')
+        detection_image = os.path.join(cutout_dir, '{:.0f}_{:02d}.fits'.format(number,
+                                                                               reference_detection['CATALOG_NUMBER']))
 
         # ------
         # Call SExtractor in dual image mode
@@ -170,8 +169,8 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
 
         for ind, detection in source.iterrows():
 
-            catalog = os.path.join(cutout_dir, '_'.join([str(detection.SOURCE_NUMBER),
-                                                         str(detection.CATALOG_NUMBER)]) + '.cat')
+            catalog = os.path.join(cutout_dir, '{:.0f}_{:02d}.cat'.format(detection.SOURCE_NUMBER,
+                                                                           detection.CATALOG_NUMBER))
 
             with fits.open(catalog) as cat:
                 for prop in ['MAG', 'FLUX']:
