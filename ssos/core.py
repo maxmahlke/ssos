@@ -11,7 +11,9 @@ from astropy.time import Time
 import astropy.units as u
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
+import ssos
 import ssos.filt as filt
 from ssos.opt import extract_cutouts
 from ssos.opt import compute_aperture_magnitudes
@@ -19,6 +21,7 @@ from ssos.opt import crossmatch_skybot
 from ssos.utils import create_target_dir
 from ssos.utils import init_argparse
 from ssos.utils import init_logger
+from ssos.utils import preprocess
 from ssos.utils import query_skybot
 from ssos.utils import unpack_header_kw
 
@@ -53,14 +56,15 @@ class Pipeline:
         # Assert that images are found and contain the required header keywords
         self.images = [os.path.join(os.path.abspath(self.args.fields[0]), image) for image in
                        os.listdir(os.path.abspath(self.args.fields[0])) if image.endswith('.fits')]
-        assert len(self.images) > 0, 'No images found in %s! Ensure that they have a .fits'\
-                                     ' extension' % os.path.abspath(self.args.fields[0])
+        assert len(self.images) > 0, (f'No images found in {os.path.abspath(self.args.fields[0])}! '
+                                      f'Ensure that they have a .fits extension.')
 
         self.target_dir, self.paths = create_target_dir(self.args)
         self.log, self.log_file, self.start_time = init_logger(self.args, self.paths['logs'])
-        self.log.info('\n\t--- The ssos Pipeline ---\t\t--- {:s} ---\n\n'
-                      .format(time.strftime('%Y/%m/%d %H:%M:%S', self.start_time)))
-
+        self.term_size = os.get_terminal_size().columns
+        print(f'')
+        self.log.info(f'--- The ssos Pipeline v{ssos.__version__} ---'
+                      f' {time.strftime("%Y/%m/%d %H:%M:%S", self.start_time)} ---'.center(self.term_size))
 
         # Reading and checking the settings
         self.settings = self._set_settings()
@@ -72,6 +76,11 @@ class Pipeline:
         self.analysis_steps = [param for param in ANALYSIS_STEPS.keys() if self.settings[param]]
         self.added_proper_motion = False
         self.added_SExtractor_data = False
+
+        # Preprocessing
+        if self.settings['FIX_HEADER']:
+            self.log.info(f'{self.term_size * "-"}\n')
+            preprocess(self.images)
 
         # Little hack for fixed apertuer magnitudes "without" cutout extraction
         if not self.settings['EXTRACT_CUTOUTS'] and self.settings['FIXED_APER_MAGS']:
@@ -175,12 +184,11 @@ class Pipeline:
             kws = ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']
             for kw in kws:
                 if not unpack_header_kw(exposure, self.settings[kw], self.sci_ext):
-                    raise PipelineSettingsException('Could not find keyword %s in FITS header.'\
-                                                    ' Is the SCI_EXTENSION correct?' % self.settings[kw])
+                    raise PipelineSettingsException(f'Could not find keyword {self.settings[kw]} in FITS header.')
                 if kw == 'DATE-OBS':
                     # Find format of DATE-OBS keyword
                     try:
-                        Time(unpack_header_kw(exposure, kw, try_first=self.sci_ext), format='isot')
+                        Time(unpack_header_kw(exposure, self.settings[kw], try_first=self.sci_ext), format='isot')
                         self.date_obs_fmt = 'isot'
                     except ValueError:
                         self.date_obs_fmt = 'mjd'
@@ -202,7 +210,7 @@ class Pipeline:
             settings['WEIGHT_IMAGES'] = False
 
         # Convert filter strings to booleans
-        for param in ['REMOVE_REF_SOURCES', 'FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
+        for param in ['FIX_HEADER', 'REMOVE_REF_SOURCES', 'FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
                       'IDENTIFY_OUTLIER', 'FILTER_TRAIL',
                       'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT', 'EXTRACT_CUTOUTS',
                       'FIXED_APER_MAGS']:
@@ -258,14 +266,15 @@ class Pipeline:
             ra, dec, object = unpack_header_kw(exposure, ['RA', 'DEC', 'OBJECT'], try_first=self.sci_ext)
 
         ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
-
-        self.log.info('\t|\t'.join(['%i Exposures' % len(self.images),
+        print('\n')
+        self.log.info('   |   '.join(['%i Exposures' % len(self.images),
                                     '%s' % object,
-                                    '%.2fdeg Ecliptic Latitude\n\n' % ecli_lat]))
+                                    '%.2fdeg Ecliptic Latitude' % ecli_lat]).center(self.term_size))
 
         # Get number of known SSOs in FoV from SkyBoT
         if self.settings['CROSSMATCH_SKYBOT']:
-            self.log.info('Querying SkyBoT for known SSOs in FoV..\n')
+            print(f'\n\n{"-" * self.term_size}')
+            self.log.info('\rQuerying SkyBoT for known SSOs in FoV..')
 
             if not self.args.skybot and \
                os.path.isfile(os.path.join(self.paths['skybot'], 'skybot_all.csv')):
@@ -279,7 +288,6 @@ class Pipeline:
                     with fits.open(img) as exp:
                         ra, dec, date_obs, texp = unpack_header_kw(exp, [self.settings['RA'], self.settings['DEC'],
                                                                          self.settings['DATE-OBS'], self.settings['EXPTIME']], self.sci_ext)
-
                         mid_epoch = (Time(date_obs, format=self.date_obs_fmt) + float(texp) / 2 * u.second).isot
 
                         if self.settings['FOV_DIMENSIONS'] == '0x0':
@@ -322,12 +330,16 @@ class Pipeline:
                 magnitudes = '  '.join([str(i) for i in range(int(min(bins)),
                                                              int(np.ceil(max(bins))) + 1
                                                              )])
+                # center histogram
+                buffer = int((self.term_size - len(magnitudes) ) / 2) * ' '
+                magnitudes = buffer + magnitudes
                 # construct bar chart top-down
                 bars = []
                 bar_height = 7
 
+
                 for i in range(1, bar_height):
-                    bar = ' '
+                    bar = buffer
                     for count in counts:
                         if count >= max(counts.values) * (bar_height-i)/bar_height:
                             bar += '##'
@@ -335,7 +347,7 @@ class Pipeline:
                             bar += '  '
                     bars.append(bar)
                 # bottom bar
-                bar = ' '
+                bar = buffer
                 for count in counts:
                     if count > 0:
                         bar += '##'
@@ -343,12 +355,13 @@ class Pipeline:
                         bar += '  '
                 bars.append(bar)
 
-                self.log.info('\nSkyBoT: %i SSOs with %i detections\n'
-                              '\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n %s\n%sMv\n'
-                               % (len(set(self.skybot.Name)),
-                                  len(self.skybot),
-                                  *bars, magnitudes,
-                                  ' ' * int(len(magnitudes) / 2)))
+
+                self.log.info(f'\rQuerying SkyBoT for known SSOs in FoV.. '
+                              f'{len(set(self.skybot.Name))} SSOs with {len(self.skybot)} detections\n')
+
+                self.log.info('\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n %s\n%sMv\n'
+                               % (*bars, magnitudes[1:],
+                                  buffer[::2] + ' ' * int(len(magnitudes) / 2)))
             else:
                 self.log.info('No known SSOs returned by SkyBoT.\n')
 
@@ -442,37 +455,39 @@ class Pipeline:
     def run_SExtractor(self):
         ''' Wrapper for SExtractor run.  Adds progress bar.'''
 
+        print(f'{"-" * self.term_size}')
         self.SExtractor_catalogues = []
 
         observation_epochs = []
         # Add progress bar
-        if not self.args.quiet:
-            sys.stdout.write('[%s]' % (' ' * len(self.images)))
-            sys.stdout.flush()
-            sys.stdout.write('\b' * (len(self.images) + 1))
+        #if not self.args.quiet:
+        #    sys.stdout.write('[%s]' % (' ' * (self.term_size - len_of_exp_string)))
+        #    sys.stdout.flush()
+        #    sys.stdout.write('\b' * ((self.term_size - len_of_exp_string)))
 
-        for image in self.images:
+        with tqdm(total=len(self.images), desc='Creating source catalogues', unit='imgs') as pbar:
+            for image in self.images:
 
-            if self.settings['SCI_EXTENSION']:
+                if self.settings['SCI_EXTENSION']:
 
-                for extension in self.settings['SCI_EXTENSION']:
-                    cat, date_obs = self._run_SExtractor_on_single_image(image, extension)
+                    for extension in self.settings['SCI_EXTENSION']:
+                        cat, date_obs = self._run_SExtractor_on_single_image(image, extension)
+                        observation_epochs.append(date_obs)
+                        self.SExtractor_catalogues.append(cat)
+
+                else:
+                    cat, date_obs = self._run_SExtractor_on_single_image(image, False)
                     observation_epochs.append(date_obs)
                     self.SExtractor_catalogues.append(cat)
+                pbar.update()
+                #if not self.args.quiet:
+                #    sys.stdout.write(int((self.term_size - len_of_exp_string) / len(self.images)) * '=')
+                #    sys.stdout.flush()
 
-            else:
-                cat, date_obs = self._run_SExtractor_on_single_image(image, False)
-                observation_epochs.append(date_obs)
-                self.SExtractor_catalogues.append(cat)
-
-            if not self.args.quiet:
-                sys.stdout.write('-')
-                sys.stdout.flush()
 
         # Sort the SExtractor catalogues by their observation epochs, important for SCAMP
         self.SExtractor_catalogues = [cat for _, cat in sorted(zip(observation_epochs,
                                                                self.SExtractor_catalogues))]
-
 
     def run_SCAMP(self, crossid_radius=None, full_name='full.cat',
                   merged_name='merged.cat', keep_refcat=False,
@@ -522,7 +537,7 @@ class Pipeline:
             scamp_from_file = True
 
         else:
-            self.log.info('\nRunning SCAMP..\t')
+            self.log.info('\nAssociating source detections..\n')
 
             # ------
             # Exectue SCAMP
@@ -562,7 +577,23 @@ class Pipeline:
     def adjust_SExtractor_catalogues(self):
         # Flags source detections which were associated to reference sources
         # These will subsequently be ignored by SCAMP
-        self.log.info('Adjusting SExtractor catalogues for pattern matching..\n')
+
+        def _clean_catalogue(catalogue, cat_number):
+            with fits.open(self.SExtractor_catalogues[cat_number-1]) as cat:
+
+                for extension, detections in catalogue.groupby('EXTENSION'):
+                    extension *= 2 # extensions are HEADER and DATA
+
+                    xwin_img = cat[extension].data.field('XWIN_IMAGE')
+                    detections_to_flag = np.in1d(xwin_img, detections.X_IMAGE)
+                    cat[extension].data['FLAGS'][detections_to_flag] = 128
+
+                cat.writeto(self.SExtractor_catalogues[cat_number-1], overwrite=True)
+
+        print(f'{"-" * self.term_size}')
+        tqdm.pandas(desc='Removing reference sources')
+
+        #self.log.info('Removing reference sources..\n')
         REMOVE_DETECTIONS = 2 # 1 image + reference, lower limit
 
         detections = Counter(self.sources.SOURCE_NUMBER) # this includes references
@@ -577,20 +608,11 @@ class Pipeline:
         self.sources = self.sources[self.sources.SOURCE_NUMBER.isin(flag)]
         self.sources = self.sources[self.sources.CATALOG_NUMBER != 0]
 
-        for cat_number, catalogue in self.sources.groupby('CATALOG_NUMBER'):
-            with fits.open(self.SExtractor_catalogues[cat_number-1]) as cat:
+        self.sources.groupby('CATALOG_NUMBER').progress_apply(lambda group: _clean_catalogue(group, group.name))
+        print(f'{"-" * self.term_size}')
 
-                for extension, detections in catalogue.groupby('EXTENSION'):
-                    extension *= 2 # extensions are HEADER and DATA
-
-                    xwin_img = cat[extension].data.field('XWIN_IMAGE')
-                    detections_to_flag = np.in1d(xwin_img, detections.X_IMAGE)
-                    cat[extension].data['FLAGS'][detections_to_flag] = 128
-
-                cat.writeto(self.SExtractor_catalogues[cat_number-1], overwrite=True)
 
     def adjust_ahead_files(self):
-        self.log.info('Copying astrometric solution to aheader files..\n')
         aheaders = [cat.replace('.cat', '.ahead') for cat in self.SExtractor_catalogues]
 
         for ahead in aheaders:

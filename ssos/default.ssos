@@ -4,6 +4,7 @@
 # Image Parameters
 
 SCI_EXTENSION          All                     # Science Extension of FITS file
+FIX_HEADER             True                    # Adjust/remove bad distortion parameters inplace
 WEIGHT_IMAGES          False                   # Absolute path to weight images for SExtractor run
 RA                     CRVAL1                  # Header keyword of right ascension in degree
 DEC                    CRVAL2                  # Header keyword of declination in degree
@@ -24,7 +25,7 @@ SEX_NNW                semp/default.nnw        # Path to SExtractor neural netwo
 # SCAMP
 
 SCAMP_CONFIG           semp/ssos.scamp         # Path to SCAMP config file
-REMOVE_REF_SOURCES     True                    # Remove reference sources before pattern matching
+REMOVE_REF_SOURCES     False                   # Remove reference sources before pattern matching
 
 # ------
 # SWARP
@@ -46,7 +47,7 @@ FILTER_PIXEL           True                    # Filter by pixel margin
 DELTA_PIXEL            2                       # Lower limit of pixel margin
 
 FILTER_MOTION          True                    # Filter by linear motion
-IDENTIFY_OUTLIER       True                    # Flag outlier and fit subgroups
+IDENTIFY_OUTLIER       False                   # Flag outlier and fit subgroups
 OUTLIER_THRESHOLD      2                       # Threshold in DeltaEpoch / MAD
 R_SQU_M                0.95                    # Minimum goodness-of-fit
 
@@ -55,8 +56,8 @@ RATIO                  0.25                    # Minimum ratio of mean/outlier
 
 FILTER_BRIGHT_SOURCES  True                    # Filter by distance to bright source
 BRIGHT_SOURCES_CAT     REFCAT                  # REFCAT or Path to local catalog
-DISTANCE               300                     # Minimum distance to source in "
-MAG_LIMITS             -99,99                  # Magnitude limits applied to bright sources catalogue
+DISTANCE               50                      # Minimum distance to source in "
+MAG_LIMITS             -99,6                   # Magnitude limits applied to bright sources catalogue
 
 # ------
 # Optional Analyses

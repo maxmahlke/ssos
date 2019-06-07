@@ -11,6 +11,45 @@ from astropy.io import fits
 from astropy.time import Time
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+
+def _call_swarp(row, settings, log, paths, args):
+
+    image_dir    = args.fields[0]
+    cutout_dir   = paths['cutouts']
+    cutout_size  = settings['CUTOUT_SIZE']
+    swarp_config = settings['SWARP_CONFIG']
+
+    img_ext = settings['SCI_EXTENSION'][row['EXTENSION'] - 1] if settings['SCI_EXTENSION'] else row['EXTENSION'] - 1
+    image_file = os.path.join(image_dir, row['IMAGE_FILENAME']) + '[%i]' % img_ext
+
+    cutout_filename = os.path.join(cutout_dir, '{:.0f}_{:02d}.fits'.format(row['SOURCE_NUMBER'],
+                                                                           row['CATALOG_NUMBER']))
+
+    if not args.swarp and os.path.isfile(cutout_filename):
+        log.debug('Cutout %s exists, skipping..' % cutout_filename)
+        return False
+
+    swarp_args = {
+                'file': image_file,
+                'config': swarp_config,
+                'overwrite_params': {
+                    'WEIGHTOUT_NAME': os.path.join(paths['tmp'], 'tmp_weight'),
+                    'CENTER'        : '{:.5f},{:.5f}'.format(row['ALPHA_J2000'], row['DELTA_J2000']),
+                    'IMAGEOUT_NAME' : '{:s}'.format(cutout_filename),
+                    'IMAGE_SIZE'    : str(cutout_size),
+                    'COPY_KEYWORDS' : 'OBJECT,RA,DEC,FILTER,DATE-OBS'},
+                }
+    # ------
+    # Build command and execute SWARP
+    cmd = ' '.join(['swarp', swarp_args['file'], '-c', swarp_args['config']])
+    for param, value in swarp_args['overwrite_params'].items():
+        cmd += ' '.join([' -' + param, value])
+
+    log.debug('\nExecuting SWARP command:\n%s' % cmd)
+    if log.level > 10:  # Shown SWARP warnings only when debugging
+        cmd += ' >/dev/null 2>&1'
+    os.system(cmd)
 
 
 def extract_cutouts(sources, settings, log, paths, args):
@@ -32,44 +71,8 @@ def extract_cutouts(sources, settings, log, paths, args):
 
     log.info('\nExtracting cutouts with SWARP..')
 
-    image_dir    = args.fields[0]
-    cutout_dir   = paths['cutouts']
-    cutout_size  = settings['CUTOUT_SIZE']
-    swarp_config = settings['SWARP_CONFIG']
-
-    for index, row in sources.iterrows():
-        img_ext = settings['SCI_EXTENSION'][row['EXTENSION'] - 1] if settings['SCI_EXTENSION'] else row['EXTENSION'] - 1
-        image_file = os.path.join(image_dir, row['IMAGE_FILENAME']) + '[%i]' % img_ext
-
-        cutout_filename = os.path.join(cutout_dir, '{:.0f}_{:02d}.fits'.format(row['SOURCE_NUMBER'],
-                                                                               row['CATALOG_NUMBER']))
-
-        if not args.swarp and os.path.isfile(cutout_filename):
-            log.debug('Cutout %s exists, skipping..' % cutout_filename)
-            continue
-
-        swarp_args = {
-                    'file': image_file,
-                    'config': swarp_config,
-                    'overwrite_params': {
-                        'WEIGHTOUT_NAME': os.path.join(paths['tmp'], 'tmp_weight'),
-                        'CENTER'        : '{:.5f},{:.5f}'.format(row['ALPHA_J2000'], row['DELTA_J2000']),
-                        'IMAGEOUT_NAME' : '{:s}'.format(cutout_filename),
-                        'IMAGE_SIZE'    : str(cutout_size),
-                        'COPY_KEYWORDS' : 'OBJECT,RA,DEC,FILTER,DATE-OBS'},
-                    }
-        # ------
-        # Build command and execute SWARP
-        cmd = ' '.join(['swarp', swarp_args['file'], '-c', swarp_args['config']])
-        for param, value in swarp_args['overwrite_params'].items():
-            cmd += ' '.join([' -' + param, value])
-
-        log.debug('\nExecuting SWARP command:\n%s' % cmd)
-        if log.level > 10:  # Shown SWARP warnings only when debugging
-            cmd += ' >/dev/null 2>&1'
-        os.system(cmd)
-
-    log.info('\tDone.\n')
+    tqdm.pandas(desc='Creating cutouts', unit='cutouts')
+    sources.progress_apply(lambda row: _call_swarp(row, settings, log, paths, args), axis=1)
     return sources
 
 

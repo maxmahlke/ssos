@@ -290,7 +290,7 @@ def bright_sources_catalog(sources, settings):
         except IndexError:
             from ssos.core import PipelineSettingsException
             raise PipelineSettingsException('Could not find SCAMP reference catalogue %s\n' \
-                                             'Run SCAMP to retrieve it to file.' % astref_catalog)
+                                             'Run SCAMP with SAVE_REFCATALOG set to Y to retrieve it to file.' % astref_catalog)
     try:
         with fits.open(settings['BRIGHT_SOURCES_CAT']) as ref_cat:
             bright_sources = Table(ref_cat[2].data).to_pandas()

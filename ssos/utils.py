@@ -6,8 +6,13 @@ import time
 import warnings
 
 from astropy.coordinates import SkyCoord
+from astropy.io.fits.verify import VerifyWarning
+warnings.simplefilter('ignore', category=VerifyWarning)
+
+from astropy.io import fits
 import astropy.units as u
 import pandas as pd
+from tqdm import tqdm
 
 
 def init_argparse():
@@ -57,7 +62,7 @@ def init_argparse():
 
     group = parser.add_argument_group('Filter Settings')
 
-    for prop in ['REMOVE_REF_SOURCES', 'FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION', 'IDENTIFY_OUTLIER',
+    for prop in ['FIX_HEADER', 'REMOVE_REF_SOURCES', 'FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION', 'IDENTIFY_OUTLIER',
                  'FILTER_TRAIL', 'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT',
                  'EXTRACT_CUTOUTS', 'FIXED_APER_MAGS']:
 
@@ -243,3 +248,46 @@ def unpack_header_kw(hdus, keywords, try_first=0):
         return vals[0]
 
     return vals
+
+
+def preprocess(imgs):
+    '''
+        Checks if the header keywords are SCAMP compatible
+        and adjusts them if user confirms
+
+        input
+        ------
+        imgs - list, path to images
+    '''
+
+    # Checks the images for the presence of bad keywords
+
+    bad_kws = ['PV1_0','PV1_1','PV1_2','PV1_4','PV1_5',
+               'PV1_6', 'PV1_7', 'PV1_8', 'PV1_9', 'PV1_10',
+               'PV2_0', 'PV2_1', 'PV2_2', 'PV2_3', 'PV2_4', 'PV2_5',
+               'PV2_6', 'PV2_7', 'PV2_8', 'PV2_9', 'PV2_10']
+
+
+    for img in tqdm(imgs, unit='imgs', desc='Preprocessing'):
+        with fits.open(img) as hdu:
+            ctypes = unpack_header_kw(hdu, ['CTYPE1', 'CTYPE2'])
+            distor = unpack_header_kw(hdu, bad_kws)
+
+        if any([typ.endswith('--ZPN') for typ in ctypes]) or any(distor):
+            with fits.open(img, 'update', verify=False) as exp:
+
+                for hdu in exp:
+                    header = hdu.header
+
+                    try:
+                        # Change CTYPEX from ZPN to TAN
+                        header['CTYPE1'] = 'RA---TAN'
+                        header['CTYPE2'] = 'DEC--TAN'
+                    except KeyError:
+                        continue
+
+                    for kw in bad_kws:
+                        try:
+                            del header[kw]
+                        except KeyError:
+                                pass

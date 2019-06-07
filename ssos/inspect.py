@@ -104,5 +104,5 @@ def inspectCutouts(ana_dirs):
             plt.show()
 
         print('Found %i asteroids, %i unknown objects, and discarded %i candidates.' %
-              (len(set(ssos[ssos['ASTEROID']]['SOURCE_NUMBER'])), len(set(ssos[ssos['UNKNOWN']]['SOURCE_NUMBER'])), len(set(ssos[~ssos['ASTEROID']]['SOURCE_NUMBER']))))
+              (len(set(ssos[ssos['ASTEROID']]['SOURCE_NUMBER'])), len(set(ssos[ssos['UNKNOWN']]['SOURCE_NUMBER'])), len(set(ssos[(~ssos['ASTEROID']) & (~ssos['UNKNOWN'])]['SOURCE_NUMBER']))))
         ssos.to_csv(sso_path, index=False)

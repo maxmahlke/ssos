@@ -1,5 +1,7 @@
 astropy
+matplotlib
 numpy
 pandas
 scipy
 statsmodels
+tqdm

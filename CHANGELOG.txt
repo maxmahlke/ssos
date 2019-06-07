@@ -1,3 +1,11 @@
+1.2.5
+---
+* Including preprocessing steps: Certain FITS header keywords stop SCAMP from computing the astrometric solution. If FIX_HEADER is set to True, these keywords are removed from the original images. Further, the projection parameters CTYPE are changed from ZPN to TAN if necessary
+* Started switching to f-strings. This requires python3.6 but improves readability and maintainability of the code
+* Improved console output: The progress bar on the SExtractor runs and others now display time estimates. The tqdm package is used and added as requirement
+* Some changes to the default settings of ssos and scamp
+* Bugfixes
+
 1.2.4
 ---
 * Bugfix in fixed aperture extraction method

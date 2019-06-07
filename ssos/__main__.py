@@ -41,7 +41,6 @@ def main():
 
     # ------
     # Run SExtractor on images
-    pipeline.log.info('\nRunning SExtractor..\t')
     pipeline.run_SExtractor()
 
     # ------
@@ -58,13 +57,17 @@ def main():
     # ========
     # Catalogue creation done
     # ========
-    pipeline.log.info('\n --- Starting Filter pipeline ---\n\n')
-    pipeline.log.info('%s %i\n' % ('All Sources'.ljust(20), pipeline.number_of_sources()))
+    pipeline.log.info(f'{pipeline.term_size * "-"}\n')
 
     # Call pipeline filter steps
+    init_source_numb = pipeline.number_of_sources()
+    pipeline.log.info(f'{"Initial sample size".ljust(22)}'
+                      f' {str(init_source_numb).ljust(len(str(init_source_numb)))} | '
+                      f'{"#" * (pipeline.term_size - 26 - len(str(init_source_numb)))}' )
     for step in pipeline.steps:
         pipeline.execute_filter(step)
-        pipeline.log.info('%s %i \n' % (step.ljust(20), pipeline.number_of_sources()))
+        pipeline.log.info(f'{step.ljust(22)} {str(pipeline.number_of_sources()).ljust(len(str(init_source_numb)))} | '
+                          f'{"#" * int(((pipeline.term_size - 26 - len(str(init_source_numb)))) * pipeline.number_of_sources()/init_source_numb)}\n')
 
     if not pipeline.added_proper_motion:
         pipeline.add_proper_motion()
@@ -80,6 +83,7 @@ def main():
     # Optional analyses
 
     pipeline.add_image_metadata()
+    print(f'{"-" * pipeline.term_size}')
 
     for step in pipeline.analysis_steps:
         pipeline.execute_analysis(step)
@@ -87,6 +91,7 @@ def main():
     # ------
     # Rename columns, remove unnecessary data, save to file
     pipeline.save_and_cleanup()
+    print(f'{"-" * pipeline.term_size}')
 
     pipeline.log.info('\t|\t'.join(
                      ['\nAll done!',

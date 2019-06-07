@@ -43,7 +43,7 @@ Make sure that the astrOmatic binaries :bash:`sex`, :bash:`scamp`, and :bash:`sw
     $ swarp --version
     SWarp version 2.38.1
 
-After installing, you can run the script ``ssos`` from anywhere in your system.
+After installing, you can verify that the install worked by entering ``ssos`` from anywhere in your system. It should give you the version and some basic instructions.
 
 
 Pipeline Setting Files

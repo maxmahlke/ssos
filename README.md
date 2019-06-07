@@ -6,7 +6,7 @@ Pipeline to detect, identify, and recover Solar System Objects in astronomical i
 
 The online documentation is available at https://ssos.readthedocs.io/en/latest/
 
-An article describing the high-level design of the pipeline is in preparation. In the meantime, if you have used the _ssos_ pipeline in your research, please reference
+An article describing the high-level design of the pipeline has been accepted for publication in _Astronomy&Computing_. In the meantime, if you have used the _ssos_ pipeline in your research, please reference
 
 _Mahlke M., et al 2018, The ssos Pipeline, 1.2.1, Astrophysics Source Code Library ascl:1901.006_
 
