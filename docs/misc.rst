@@ -32,10 +32,10 @@ SCAMP
 
 The `FLAGS_SCAMP` output parameter is a binary code (like the SExtractor flags) and refers to the following issues:
 
-1 is for sources being rejected from the astrometric solution
-16 is for sources being rejected from the photometric solution
-32 is for sources without color indices
-64 is for sources being rejected from the linear proper motion fit
+* 1 is for sources being rejected from the astrometric solution
+* 16 is for sources being rejected from the photometric solution
+* 32 is for sources without color indices
+* 64 is for sources being rejected from the linear proper motion fit
 
 Pipeline
 =============
