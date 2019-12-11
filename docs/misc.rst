@@ -47,3 +47,4 @@ Pipeline
 
 * `OBSERVATORY_CODE`, `FOV_DIMENSIONS`, `REFERENCE_FILTER` are the only settings which are not checked for correct input upon the pipeline initialization.
 
+* Asteroids can be associated to stars if they pass close by or temporarily become too faint. A good way to finde these erroneous detections is by looking for detections flagged by SCAMP with the value 64

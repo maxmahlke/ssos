@@ -1,3 +1,7 @@
+1.2.6
+---
+* Included a check on the SCAMP flag 64 in the linear motion filter
+* A change in the pandas API requires an up-to-date tqdm version. This is now enforced upon installation
 1.2.5
 ---
 * Including preprocessing steps: Certain FITS header keywords stop SCAMP from computing the astrometric solution. If FIX_HEADER is set to True, these keywords are removed from the original images. Further, the projection parameters CTYPE are changed from ZPN to TAN if necessary

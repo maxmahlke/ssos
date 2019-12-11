@@ -1,5 +1,5 @@
 name = 'ssos'
-__version__ = '1.2.5'
+__version__ = '1.2.6'
 
 
 GREETING = '''
@@ -11,7 +11,7 @@ GREETING = '''
 |                 |   ssos --help    : Print detailed help
 O -     *        '    ssos [-PARAMETER] [-VALUE] path/to/images
 |
-        _..:'         max.mahlke(at)cab.inta-csic.es
+        _..:'         max.mahlke(at)oca.eu
   +   (_.:
 
         ''' % __version__

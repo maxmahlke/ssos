@@ -142,10 +142,20 @@ def linear_motion(sources, settings):
         sources - pandas dataframe, sources data without the sources filtered in this step
     '''
 
+    # Reject sources which SCAMP flagged 64 - order 64
+    # Either two or more flagged detections, or 20% or more
+    for sn, source in sources.copy().groupby('SOURCE_NUMBER'):
+        if isinstance(source.FLAGS_SCAMP, float):
+            continue
+        bad_detections = [1 for flag in source.FLAGS_SCAMP.values
+                          if flag == 64 or flag == 96]
+        if sum(bad_detections) >= 2 or sum(bad_detections) / len(source) >= 0.2:
+            sources = sources.drop(index=source.index)
+
     r_squ, out_thres, id_out = settings['R_SQU_M'], settings['OUTLIER_THRESHOLD'],\
                                settings['IDENTIFY_OUTLIER']
 
-     # Lower limit of subgroup size
+    # Lower limit of subgroup size
     min_detections = 3
 
     sources_to_remove = []

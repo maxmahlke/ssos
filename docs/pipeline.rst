@@ -102,6 +102,8 @@ The filter is effective in sorting out stars and galaxies from the sample, as th
 Problems arise when the observations span multiple hours or nights. If the survey images for example cover one area of the sky for the whole night with 50 exposures, it may occur that an SSO is observed in the first and the last 5 exposures. Such a long baseline with no observations in between will almost always yield a perfect linear fit. The same is true for sources randomly associated by stars, e.g. two stars close together or a star and several CRs. Again, the linear motion filter will be fooled by the large baseline of observations.
 To tackle this problem, the `IDENTIFY_OUTLIER` option was introduced. If `True`, the motion filter starts by detecting outliers in epoch-space within the detections of one source. This is achieved using the **Median Absolute Deviation** (MAD) of the observation epochs *E*.
 
+Further, we use SCAMPs flagging of non-linearly moving sources to reject candidates: If a source has two or more detections in total or at least 20% of its detections flagged as 64, it is rejected.
+
 .. math::
 
    \mathrm{MAD} = \mathrm{median}(|E_{i} - \mathrm{median}(E)|)

@@ -7,7 +7,7 @@ with open('README.md', 'r') as rm:
 
 setup(
     name = 'ssos',
-    version = '1.2.5',
+    version = '1.2.6',
     description = 'The ssos Pipeline - Identiciation of Solar System Objects in astronomical images',
     url = 'https://github.com/maxmahlke/ssos',
     author = 'Max Mahlke',
@@ -23,7 +23,7 @@ setup(
                       'numpy',
                       'scipy',
                       'statsmodels>=0.9.0',
-                      'tqdm'
+                      'tqdm>=4.40.2'
                       ],
     install_requires = [
                         'astropy',
@@ -32,7 +32,7 @@ setup(
                         'numpy',
                         'scipy',
                         'statsmodels>=0.9.0',
-                        'tqdm'
+                        'tqdm>=4.40.2'
                         ],
     entry_points = {
                     'console_scripts': ['ssos = ssos.__main__:main']

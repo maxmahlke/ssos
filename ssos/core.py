@@ -5,7 +5,6 @@ import sys
 
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-from astropy.io.votable import parse_single_table
 from astropy.table import Table
 from astropy.time import Time
 import astropy.units as u
@@ -24,7 +23,6 @@ from ssos.utils import init_logger
 from ssos.utils import preprocess
 from ssos.utils import query_skybot
 from ssos.utils import unpack_header_kw
-
 
 
 FILTER_STEPS = {
@@ -51,7 +49,6 @@ class Pipeline:
 
         # Preparations: Handling of command line arguments
         self.args = init_argparse()
-
 
         # Assert that images are found and contain the required header keywords
         self.images = [os.path.join(os.path.abspath(self.args.fields[0]), image) for image in
@@ -572,7 +569,6 @@ class Pipeline:
 
         # Add flag to dataframe
         self.sources['FLAGS_SSOS'] = 0
-
 
     def adjust_SExtractor_catalogues(self):
         # Flags source detections which were associated to reference sources
