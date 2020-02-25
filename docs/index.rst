@@ -23,13 +23,15 @@ Introduction to the ``ssos`` Pipeline
 =====================================
 The ``ssos`` Pipeline is a versatile tool to detect, identify, and characterize Solar System Objects in consecutive exposures of the sky. A large configurability allow the application of ``ssos`` to almost any kind of astronomical images, Best use cases are wide-field imaging surveys such as the `Kilo-Degree Survey <http://kids.strw.leidenuniv.nl/>`_, for which the pipeline was `originally designed <https://www.aanda.org/articles/aa/ref/2018/02/aa30924-17/aa30924-17.html>`_.
 
+A detailed description was published in `Mahlke+ 2019 <https://arxiv.org/abs/1906.03673>`_.
+
 The pipeline is written in ``python 3``. The three main steps are
 
 * detecting all sources in all images using `SExtractor <https://www.astromatic.net/software/sextractor>`_
 * associating sources detections between all images using `SCAMP <https://www.astromatic.net/software/scamp>`_, to build a complete source catalogue
 * separating the asteroids from other sources such as stars, galaxies, artifacts using a filter chain
 
-Additional analyses can be done, e.g. identifying known SSOs in the candidates sample by cross-matching with the `SkyBoT <http://vo.imcce.fr/webservices/skybot/>`_ database or creating cutouts with `SWarp <https://www.astromatic.net/software/swarp>`_.
+Additional analyses can be done, e.g. identifying known SSOs in the candidates sample by cross-matching with the `SkyBoT <http://vo.imcce.fr/webservices/skybot/>`_ database or creating cutouts for fixed-aperture magnitude extraction with `SWarp <https://www.astromatic.net/software/swarp>`_.
 
 The strength of the pipeline lies in the large degree of versatility. All steps can be adapted to the images at hand using configuration files. The install process and the typical workflow are described in the `Getting Started <setup.html>`_.
 
@@ -64,5 +66,7 @@ The ``ssos`` pipeline is built upon the previous work, expertise and support by 
 
 * The pandas python package: `McKinney et al. 2010 <https://www.researchgate.net/profile/Wes_Mckinney/publication/265001241_Data_Structures_for_Statistical_Computing_in_Python/links/5670827d08ae2b1f87aced0c.pdf>`_
 
+* The sbpy python package: Mommert et al., (2019). sbpy: A Python module for small-body planetary astronomy. Journal of Open Source Software, 4(38), 1426, https://doi.org/10.21105/joss.01426
 
-and the experts in their fields: Bruno Altieri, Hervé Bouy, Benoit Carry, Enrique Solano, Gijs Verdoes-Kleijn
+
+and the experts in their fields: Bruno Altieri, Emmanuel Bertin, Hervé Bouy, Benoit Carry, Enrique Solano, Gijs Verdoes-Kleijn

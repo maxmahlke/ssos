@@ -314,7 +314,7 @@ def bright_sources_catalog(sources, settings):
     bright_sources.rename(index=str, columns={'X_WORLD': 'RA', 'Y_WORLD': 'DEC'}, inplace=True)
 
     distance = settings['DISTANCE'] / 3600 # convert distance to degree
-    lower_mag_limit, upper_mag_limt = [int(limit) for limit in settings['MAG_LIMITS'].split(',')]
+    lower_mag_limit, upper_mag_limt = settings['MAG_LIMITS']
 
     # Remove reference sources which are too faint or too bright
     bright_sources = bright_sources[(lower_mag_limit <= bright_sources.MAG) &

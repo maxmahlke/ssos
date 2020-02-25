@@ -1,7 +1,18 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+'''
+    Author: Max Mahlke
+    Date: 16 December 2019
+
+    Core functions of the ssos pipeline
+'''
+
 from collections import Counter
 import os
-import time
+import shutil
 import sys
+import time
 
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -14,15 +25,8 @@ from tqdm import tqdm
 
 import ssos
 import ssos.filt as filt
-from ssos.opt import extract_cutouts
-from ssos.opt import compute_aperture_magnitudes
-from ssos.opt import crossmatch_skybot
-from ssos.utils import create_target_dir
-from ssos.utils import init_argparse
-from ssos.utils import init_logger
-from ssos.utils import preprocess
-from ssos.utils import query_skybot
-from ssos.utils import unpack_header_kw
+import ssos.opt as opt
+import ssos.utils as utils
 
 
 FILTER_STEPS = {
@@ -36,9 +40,10 @@ FILTER_STEPS = {
 
 
 ANALYSIS_STEPS = {
-    'CROSSMATCH_SKYBOT': crossmatch_skybot,
-    'EXTRACT_CUTOUTS':   extract_cutouts,
-    'FIXED_APER_MAGS':   compute_aperture_magnitudes
+    'CROSSMATCH_SKYBOT': opt.crossmatch_skybot,
+    'EXTRACT_CUTOUTS':   opt.extract_cutouts,
+    'FIXED_APER_MAGS':   opt.compute_aperture_magnitudes,
+    'CHECKPLOTS':        opt.create_checkplots
     }
 
 
@@ -47,49 +52,99 @@ class Pipeline:
 
     def __init__(self):
 
-        # Preparations: Handling of command line arguments
-        self.args = init_argparse()
+        # Set-up command line parser
+        self.args = utils.init_argparse()
+
+        # Create output directory structure
+        self.target_dir, self.paths = utils.create_target_dir(self.args)
+
+        # Initiate logging
+        self.log, self.log_file, self.start_time = \
+            utils.init_logger(self.args, self.paths['logs'])
+
+        # Print version info
+        self.term_size = os.get_terminal_size().columns
+        print('\n')
+        self.log.info(' --- '.join([f'The ssos Pipeline v{ssos.__version__}',
+                                   time.strftime("%Y/%m/%d %H:%M:%S",
+                                                 self.start_time)
+                                    ]).center(self.term_size))
 
         # Assert that images are found and contain the required header keywords
-        self.images = [os.path.join(os.path.abspath(self.args.fields[0]), image) for image in
-                       os.listdir(os.path.abspath(self.args.fields[0])) if image.endswith('.fits')]
-        assert len(self.images) > 0, (f'No images found in {os.path.abspath(self.args.fields[0])}! '
-                                      f'Ensure that they have a .fits extension.')
+        self.images = []
 
-        self.target_dir, self.paths = create_target_dir(self.args)
-        self.log, self.log_file, self.start_time = init_logger(self.args, self.paths['logs'])
-        self.term_size = os.get_terminal_size().columns
-        print(f'')
-        self.log.info(f'--- The ssos Pipeline v{ssos.__version__} ---'
-                      f' {time.strftime("%Y/%m/%d %H:%M:%S", self.start_time)} ---'.center(self.term_size))
+        for img in os.listdir(os.path.abspath(self.args.fields[0])):
+            if img.endswith('.fits'):
+                img_path = os.path.join(os.path.abspath(self.args.fields[0]),
+                                        img)
+                self.images.append(img_path)
+
+        assert self.images, (f'No images found in '
+                             f'{os.path.abspath(self.args.fields[0])}! '
+                             f'Ensure that they have a .fits extension.')
 
         # Reading and checking the settings
         self.settings = self._set_settings()
         self.settings = self._check_settings(self.settings)
 
-        self._print_field_info()
+        # Check for presence of WCS header information
+        wcs_present, ra, dec, object_ = utils.check_wcs(self.images,
+                                                        self.sci_ext,
+                                                        self.log)
+        if not wcs_present:
+            raise PipelineDependencyError(f'The images do not contain valid WCS'
+                                          f' information in the header. Is the'
+                                          f' SCI_EXTENSION correct?')
 
-        self.steps = [param for param in FILTER_STEPS.keys() if self.settings[param]]
-        self.analysis_steps = [param for param in ANALYSIS_STEPS.keys() if self.settings[param]]
-        self.added_proper_motion = False
-        self.added_SExtractor_data = False
+        # Print basic info
+        self._print_field_info(ra, dec, object_)
 
-        # Preprocessing
-        if self.settings['FIX_HEADER']:
-            self.log.info(f'{self.term_size * "-"}\n')
-            preprocess(self.images)
+        # Execute skybot query and print results if requested 
+        if self.settings['CROSSMATCH_SKYBOT']:
+            print(f'\n\n{"-" * self.term_size}')
 
-        # Little hack for fixed apertuer magnitudes "without" cutout extraction
-        if not self.settings['EXTRACT_CUTOUTS'] and self.settings['FIXED_APER_MAGS']:
-            self.log.debug('FIXED_APER_MAGS is True but EXTRACT_CUTOUTS is False. Will'\
-                           ' delete cutouts upon finishing.')
+            path_skybot = os.path.join(self.paths['cats'], 'skybot_all.csv')
+
+            if not self.args.skybot and os.path.isfile(path_skybot):
+                self.log.info('\rReading SkyBoT query results from file..')
+                self.skybot = pd.read_csv(path_skybot)
+
+            else:
+                self.skybot = opt.query_skybot(self.images, self.settings,
+                                               self.sci_ext, self.date_obs_fmt)
+
+            self.skybot.to_csv(path_skybot, index=False)
+
+            if not self.skybot.empty:
+                self._print_skybot_results()
+            else:
+                self.log.info(' No known SSOs returned by SkyBoT.\n')
+
+        # ------
+        # Take note of the filtering and analysis steps to execute
+        try:
+            self.steps = [param for param in FILTER_STEPS.keys()
+                          if self.settings[param]]
+            self.analysis_steps = [param for param in ANALYSIS_STEPS.keys()
+                                   if self.settings[param]]
+        except KeyError as e:
+            raise PipelineSettingsException(f'The settings parameter {e} was '
+                                            f'not found. Is the ssos settings '
+                                            f'file outdated?')
+
+        # Little hack for fixed apertuer magnitudes without cutout extraction
+        if not self.settings['EXTRACT_CUTOUTS'] and \
+                self.settings['FIXED_APER_MAGS']:
+            self.log.debug(f'FIXED_APER_MAGS is True but EXTRACT_CUTOUTS is '
+                           f'False. Will delete cutouts upon finishing.')
             self.paths['cutouts'] = self.paths['tmp']
             self.analysis_steps[0:0] = ['EXTRACT_CUTOUTS']
 
+        self.added_proper_motion = False
+        self.added_SExtractor_data = False
 
     def _set_settings(self):
-        '''
-        Set pipeline settings
+        ''' Set pipeline settings
 
         input
         ------
@@ -112,34 +167,32 @@ class Pipeline:
         except IOError:
             self.log.debug('No config file provided in CWD or via -c flag.\
                             Using default settings.\n')
-            try:
-                set_up = open(os.path.join(os.path.dirname(__file__),
-                                           'default.ssos'))
-            except IOError:
-                raise PipelineSettingsException('No configuration file provided '\
-                       'and none found in package directory.')
-
+            set_up = open(os.path.join(os.path.dirname(__file__),
+                                       'default.ssos'))
         with set_up:
             for line in set_up:
-                if line == '\n' or line[0] == '#':
+                if not line[0].isalpha():
                     continue
 
-                parameter, value = line.split()[:2]
-                settings[parameter] = value
+                param, val, *_ = line.split()
+                settings[param] = val
 
         # Override values from command line
         for arg in vars(self.args):
-            if arg in settings.keys() and vars(self.args)[arg] != None:
+            if arg in settings.keys() and vars(self.args)[arg] is not None:
                 settings[arg] = vars(self.args)[arg]
 
         # Expand $HOME to home directory
-        settings = {k: v.replace('$HOME', os.path.expanduser('~')) for k, v in settings.items()}
+        settings = {k: v.replace('$HOME',
+                                 os.path.expanduser('~'))
+                    for k, v in settings.items()}
 
-        # Filter setting finished. Write them to the logfile
-        with open(os.path.join(self.paths['logs'], self.log_file), 'a') as logfile:
+        # Write settings to logfile
+        with open(os.path.join(self.paths['logs'], self.log_file), 'a')\
+                as logfile:
 
-            for setting, value in settings.items():
-                line = setting.ljust(20) + str(value) + '\n'
+            for setting, val in settings.items():
+                line = setting.ljust(20) + str(val) + '\n'
                 self.log.debug(line)
                 logfile.write(line)
 
@@ -148,10 +201,8 @@ class Pipeline:
 
         return settings
 
-
     def _check_settings(self, settings):
-        '''
-        Converts parameter values to expected formats
+        ''' Converts parameter values to expected formats
 
         input
         -----
@@ -165,12 +216,15 @@ class Pipeline:
         # Unpack provided DETECTIONS and SCI extension(s) into list
         for param in ['SCI_EXTENSION', 'DETECTIONS']:
             try:
-                settings[param] = [int(character) for character in settings[param].split(',')]
+                settings[param] = [int(char) for char in
+                                   settings[param].split(',')]
             except ValueError:
-                if param == 'SCI_EXTENSION' and settings[param] == 'All':
-                    settings[param] = False # treat it as 'None provided'
+                if param == 'SCI_EXTENSION' and\
+                   settings[param].lower() == 'all':
+                    settings[param] = False  # treat it as 'None provided'
                 else:
                     raise PipelineSettingsException('%s value invalid' % param)
+
         if self.settings['SCI_EXTENSION']:
             self.sci_ext = self.settings['SCI_EXTENSION'][0]
         else:
@@ -178,70 +232,90 @@ class Pipeline:
 
         # Check one image header for keyword presence
         with fits.open(self.images[0]) as exposure:
-            kws = ['RA', 'DEC', 'OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME']
+            kws = ['DATE-OBS', 'FILTER', 'EXPTIME']
+
             for kw in kws:
-                if not unpack_header_kw(exposure, self.settings[kw], self.sci_ext):
-                    raise PipelineSettingsException(f'Could not find keyword {self.settings[kw]} in FITS header.')
+                val = utils.unpack_header_kw(exposure, self.settings[kw],
+                                             self.sci_ext)
+                if val is False:
+                    raise PipelineSettingsException(f'Could not find keyword '
+                                                    f'{self.settings[kw]} in '
+                                                    f'FITS header.')
                 if kw == 'DATE-OBS':
                     # Find format of DATE-OBS keyword
                     try:
-                        Time(unpack_header_kw(exposure, self.settings[kw], try_first=self.sci_ext), format='isot')
+                        Time(val, format='isot')
                         self.date_obs_fmt = 'isot'
                     except ValueError:
-                        self.date_obs_fmt = 'mjd'
-
+                        try:
+                            self.date_obs_fmt = 'mjd'
+                        except ValueError:
+                            raise PipelineSettingsException('DATE-OBS keyword '
+                                                            'is neither MJD '
+                                                            'nor ISOT.')
 
         # Check that config files exist
-        for file in ['SEX_CONFIG', 'SEX_PARAMS', 'SEX_NNW', 'SEX_FILTER',
-                     'SCAMP_CONFIG', 'SWARP_CONFIG']:
-            if not os.path.isfile(settings[file]):
-                raise PipelineSettingsException('Could not find %s in %s' %
-                                                (file, settings[file]) )
+        for file_ in ['SEX_CONFIG', 'SEX_PARAMS', 'SEX_NNW', 'SEX_FILTER',
+                      'SCAMP_CONFIG', 'SWARP_CONFIG']:
+            if not os.path.isfile(settings[file_]):
+                raise PipelineSettingsException(f'Could not find {file_} in'
+                                                f' {settings[file_]}')
 
         # Check if weight images are provided and exist
-        if not settings['WEIGHT_IMAGES'].upper() == 'FALSE':
+        if settings['WEIGHT_IMAGES'].upper() != 'FALSE':
             if not os.path.isdir(settings['WEIGHT_IMAGES']):
-                raise PipelineSettingsException('Could not find weight images directory %s.' %
-                                                 settings['WEIGHT_IMAGES'])
+                raise PipelineSettingsException(f'Could not find weight images'
+                                                f' directory '
+                                                f'{settings["WEIGHT_IMAGES"]}')
         else:
             settings['WEIGHT_IMAGES'] = False
 
         # Convert filter strings to booleans
-        for param in ['FIX_HEADER', 'REMOVE_REF_SOURCES', 'FILTER_DETEC', 'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
+        for param in ['REMOVE_REF_SOURCES', 'FILTER_DETEC',
+                      'FILTER_PM', 'FILTER_PIXEL', 'FILTER_MOTION',
                       'IDENTIFY_OUTLIER', 'FILTER_TRAIL',
-                      'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT', 'EXTRACT_CUTOUTS',
-                      'FIXED_APER_MAGS']:
-
+                      'FILTER_BRIGHT_SOURCES', 'CROSSMATCH_SKYBOT',
+                      'EXTRACT_CUTOUTS', 'FIXED_APER_MAGS']:
             if settings[param].upper() == 'TRUE':
                 settings[param] = True
             elif settings[param].upper() == 'FALSE':
                 settings[param] = False
             else:
-                raise PipelineSettingsException('Could not evaluate %s value, has to be True or\
-                                                 False' % param)
+                raise PipelineSettingsException(f'Could not evaluate {param} '
+                                                f'value, has to be True or '
+                                                f'False')
+
+        if settings['CHECKPLOTS'].upper() != 'FALSE':
+            settings['CHECKPLOTS'] = settings['CHECKPLOTS'].split(',')
+        else:
+            settings['CHECKPLOTS'] = []
 
         if settings['FILTER_MOTION']:
-            if not settings['FILTER_DETEC'] or\
-              (not 1 in settings['DETECTIONS'] and not 2 in settings['DETECTIONS']):
-                raise PipelineSettingsException('When FILTER_MOTION is True, DETECTIONS needs\
-                                                 to contain "1,2".')
+            if not settings['FILTER_DETEC'] or \
+              (1 not in settings['DETECTIONS'] and
+               2 not in settings['DETECTIONS']):
+                raise PipelineSettingsException(f'When FILTER_MOTION is True, '
+                                                f'DETECTIONS needs to contain '
+                                                f'"1,2".')
 
         # Convert numeric values to float
-        for param in ['PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL', 'OUTLIER_THRESHOLD',
-                      'R_SQU_M', 'RATIO', 'DISTANCE', 'CROSSMATCH_RADIUS',
-                      'CUTOUT_SIZE']:
-
+        for param in ['PM_LOW', 'PM_UP', 'PM_SNR', 'DELTA_PIXEL',
+                      'OUTLIER_THRESHOLD', 'R_SQU_M', 'RATIO', 'DISTANCE',
+                      'CROSSMATCH_RADIUS', 'CUTOUT_SIZE']:
             try:
                 settings[param] = float(settings[param])
             except ValueError:
-                raise PipelineSettingsException('Could not convert %s value to float'
-                                                % param)
+                raise PipelineSettingsException(f'Could not convert {param} '
+                                                f'value to float')
             if param == ['R_SQU_M']:
-                assert 0 <= settings[param] <= 1, 'The %s parameter has to be in range [0 - 1]' % param
+                assert 0 <= settings[param] <= 1, f'The {param} parameter has'\
+                                                  f'to be in range [0 - 1]'
 
         if settings['FILTER_BRIGHT_SOURCES']:
+
             # Evaluate bright-sources catalogue path
             if settings['BRIGHT_SOURCES_CAT'] == 'REFCAT':
+
                 # get the filename and column names from the scamp config file
                 with open(settings['SCAMP_CONFIG'], 'r') as file:
                     for line in file:
@@ -249,122 +323,103 @@ class Pipeline:
                             refout_catpath = line.split()[1]
                         if 'ASTREF_CATALOG' in line:
                             astref_catalog = line.split()[1]
-                if self.args.ASTREF_CATALOG: # if overwritten via command line
+
+                if self.args.ASTREF_CATALOG:  # if overwritten via command line
                     astref_catalog = self.args.ASTREF_CATALOG
 
-                settings['BRIGHT_SOURCES_CAT'] = [refout_catpath, astref_catalog]
+                settings['BRIGHT_SOURCES_CAT'] = [refout_catpath,
+                                                  astref_catalog]
 
+            settings['MAG_LIMITS'] = [float(mag) for mag in
+                                      settings['MAG_LIMITS'].split(',')]
         return settings
 
-
-    def _print_field_info(self):
+    def _print_field_info(self, ra, dec, object_):
         ''' Prints RA, DEC, and OBJECT keywords to log '''
-        with fits.open(self.images[0]) as exposure:
-            ra, dec, object = unpack_header_kw(exposure, ['RA', 'DEC', 'OBJECT'], try_first=self.sci_ext)
 
-        ecli_lat = SkyCoord(ra, dec, frame='icrs', unit='deg').barycentrictrueecliptic.lat.deg
+        # Compute the ecliptic latitude
+        coord = SkyCoord(ra, dec, frame='icrs', unit='deg')
+        ecli_lat = coord.barycentrictrueecliptic.lat.deg
         print('\n')
-        self.log.info('   |   '.join(['%i Exposures' % len(self.images),
-                                    '%s' % object,
-                                    '%.2fdeg Ecliptic Latitude' % ecli_lat]).center(self.term_size))
+        self.log.info('   |   '.join([f'{len(self.images)} Exposures',
+                                      object_,
+                                      f'{ecli_lat:.2f}deg Ecliptic Latitude']
+                                     ).center(self.term_size))
 
-        # Get number of known SSOs in FoV from SkyBoT
-        if self.settings['CROSSMATCH_SKYBOT']:
-            print(f'\n\n{"-" * self.term_size}')
-            self.log.info('\rQuerying SkyBoT for known SSOs in FoV..')
+    def _print_skybot_results(self):
+        ''' Print gimmicky SkyBoT info '''
+        bins = np.arange(np.floor(min(self.skybot.Mv)),
+                         np.ceil(max(self.skybot.Mv)), 0.5)
 
-            if not self.args.skybot and \
-               os.path.isfile(os.path.join(self.paths['skybot'], 'skybot_all.csv')):
+        counts = pd.cut(self.skybot['Mv'], bins).value_counts()
+        counts.sort_index(inplace=True)
 
-               self.skybot = pd.read_csv(os.path.join(self.paths['skybot'], 'skybot_all.csv'))
+        magnitudes = '  '.join([str(i) for i in
+                                range(int(min(bins)),
+                                      int(np.ceil(max(bins))) + 1
+                                      )])
+        # center histogram
+        buffer_ = int((self.term_size - len(magnitudes)) / 2) * ' '
+        magnitudes = buffer_ + magnitudes
 
+        # construct bar chart top-down
+        bars = []
+        bar_height = 7
+
+        for i in range(1, bar_height):
+            bar = buffer_
+            for count in counts:
+                if count >= max(counts.values) * (bar_height-i)/bar_height:
+                    bar += '##'
+                else:
+                    bar += '  '
+            bars.append(bar)
+        # bottom bar
+        bar = buffer_
+        for count in counts:
+            if count > 0:
+                bar += '##'
             else:
-                self.skybot = pd.DataFrame()
+                bar += '  '
+        bars.append(bar)
 
-                for img in self.images:
-                    with fits.open(img) as exp:
-                        ra, dec, date_obs, texp = unpack_header_kw(exp, [self.settings['RA'], self.settings['DEC'],
-                                                                         self.settings['DATE-OBS'], self.settings['EXPTIME']], self.sci_ext)
-                        mid_epoch = (Time(date_obs, format=self.date_obs_fmt) + float(texp) / 2 * u.second).isot
+        self.log.info(f'Retrieved '
+                      f'{len(set(self.skybot.Name))} SSOs with '
+                      f'{len(self.skybot)} detections\n')
+        self.log.info('\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n %s\n%sMv\n'
+                      % (*bars, magnitudes[1:],
+                          buffer_[::2] + ' ' * int(len(magnitudes) / 2)))
 
-                        if self.settings['FOV_DIMENSIONS'] == '0x0':
+    def run_SExtractor(self):
+        ''' Wrapper for SExtractor run.  Adds progress bar.'''
 
-                            # Determine exposure FoV
-                            naxis1, naxis2, cdelt1, cdelt2 = unpack_header_kw(exp, ['NAXIS1', 'NAXIS2', 'CDELT1', 'CDELT2'], self.sci_ext)
+        print(f'{"-" * self.term_size}')
+        self.SExtractor_catalogues = []
 
-                            if not cdelt1 or not cdelt2:
-                                cd11, cd12, cd21, cd22 = unpack_header_kw(exp, ['CD1_1', 'CD1_2', 'CD2_1', 'CD2_2'], self.sci_ext)
-                                dra  = naxis1 * abs(cd11) + naxis2 * abs(cd12)
-                                ddec = naxis1 * abs(cd21) + naxis2 * abs(cd22)
+        observation_epochs = []
 
-                            else:
-                                dra = naxis1 * cdelt1
-                                ddec = naxis2 * cdelt2
-
-                            # Ensure coverage by adding CROSSMATCH_RADIUS
-                            fov = '{:.1f}x{:.1f}'.format(round(dra  + self.settings['CROSSMATCH_RADIUS'] / 60, 1),
-                                                         round(ddec + self.settings['CROSSMATCH_RADIUS'] / 60, 1))
-
-                        else:
-                            fov = self.settings['FOV_DIMENSIONS']
-
-                        result = query_skybot(mid_epoch, ra, dec, fov,
-                                              self.settings['OBSERVATORY_CODE'])
-                        if not result.empty:
-                            self.skybot = self.skybot.append(result)
-
-                if not self.skybot.empty:
-                    self.skybot.to_csv(os.path.join(self.paths['skybot'], 'skybot_all.csv'), index=False)
-
-            if not self.skybot.empty:
-                # Print gimmicky SkyBoT info
-                bins = np.arange(np.floor(min(self.skybot.Mv)),
-                                 np.ceil(max(self.skybot.Mv)), 0.5)
-
-                counts = pd.cut(self.skybot['Mv'], bins).value_counts()
-                counts.sort_index(inplace=True)
-
-                magnitudes = '  '.join([str(i) for i in range(int(min(bins)),
-                                                             int(np.ceil(max(bins))) + 1
-                                                             )])
-                # center histogram
-                buffer = int((self.term_size - len(magnitudes) ) / 2) * ' '
-                magnitudes = buffer + magnitudes
-                # construct bar chart top-down
-                bars = []
-                bar_height = 7
-
-
-                for i in range(1, bar_height):
-                    bar = buffer
-                    for count in counts:
-                        if count >= max(counts.values) * (bar_height-i)/bar_height:
-                            bar += '##'
-                        else:
-                            bar += '  '
-                    bars.append(bar)
-                # bottom bar
-                bar = buffer
-                for count in counts:
-                    if count > 0:
-                        bar += '##'
-                    else:
-                        bar += '  '
-                bars.append(bar)
-
-
-                self.log.info(f'\rQuerying SkyBoT for known SSOs in FoV.. '
-                              f'{len(set(self.skybot.Name))} SSOs with {len(self.skybot)} detections\n')
-
-                self.log.info('\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n %s\n%sMv\n'
-                               % (*bars, magnitudes[1:],
-                                  buffer[::2] + ' ' * int(len(magnitudes) / 2)))
+        for image in tqdm(self.images, desc='Creating source catalogues',
+                          unit='imgs'):
+            if self.settings['SCI_EXTENSION']:
+                for extension in self.settings['SCI_EXTENSION']:
+                    cat, date_obs = \
+                        self._run_SExtractor_on_single_image(image, extension)
+                    observation_epochs.append(date_obs)
+                    self.SExtractor_catalogues.append(cat)
             else:
-                self.log.info('No known SSOs returned by SkyBoT.\n')
+                cat, date_obs = \
+                    self._run_SExtractor_on_single_image(image, False)
+                observation_epochs.append(date_obs)
+                self.SExtractor_catalogues.append(cat)
+
+        # Sort the SExtractor catalogues by their observation epochs,
+        # important for SCAMP
+        self.SExtractor_catalogues = [cat for _, cat in
+                                      sorted(zip(observation_epochs,
+                                                 self.SExtractor_catalogues))]
 
     def _run_SExtractor_on_single_image(self, image, extension):
-        '''
-        Run SExtractor on individual images.
+        ''' Run SExtractor on individual images.
 
         input
         ------
@@ -376,35 +431,43 @@ class Pipeline:
         cat, str - absolute path to SExtractor output catalog
         date_obs, str - observation epoch from exposure
         '''
+        tmp_image = os.path.join(self.paths['tmp'],
+                                  os.path.basename(image))
 
         # Name of output catalog
         cat = os.path.join(self.paths['cats'],
-                           os.path.splitext(os.path.basename(image))[0])
+                           os.path.splitext(os.path.basename(tmp_image))[0])
 
-        # Select extension or run whole image
-        if extension is not False:
-            image_ext = image + '[%i]' % extension
-            cat += '_%i.cat' % extension
-            ext = extension
-
-        else:
-            image_ext = image
+        # Select extension or run whole tmp_image
+        if extension is False:
+            tmp_image_ext = tmp_image
             cat += '.cat'
-            ext = 1
+            weight_suffix = '.weight'
+        else:
+            tmp_image_ext = tmp_image + '[%i]' % extension
+            cat += '_%i.cat' % extension
+            weight_suffix = '_%i.weight' % extension
 
+        # If we already ran this
         if not self.args.sex and os.path.isfile(cat):
-            self.log.debug('SExtractor catalog %s already exists! Skipping this sextraction..\n' % cat)
+            self.log.debug(f'SExtractor catalog {cat} already exists!'
+                           f' Skipping this sextraction..\n')
 
             with fits.open(image) as exposure:
-                date_obs = unpack_header_kw(exposure, self.settings['DATE-OBS'], self.sci_ext)
-
+                date_obs = utils.unpack_header_kw(exposure,
+                                                  self.settings['DATE-OBS'],
+                                                  self.sci_ext)
             return cat, date_obs
+
+        # Copy the image to the temporary folder and remove bad
+        # keywords from header
+        utils.create_clean_image(image, tmp_image)
 
         sex_args = {
 
-            'file': image_ext,
+            'file': tmp_image_ext,
             'config': self.settings['SEX_CONFIG'],
-            'overwrite_params': { # Arguments to initialize Astromatic class
+            'overwrite_params': {
                     'CATALOG_NAME': cat,
                     'PARAMETERS_NAME': self.settings['SEX_PARAMS'],
                     'FILTER_NAME': self.settings['SEX_FILTER'],
@@ -413,18 +476,15 @@ class Pipeline:
         }
 
         if self.settings['WEIGHT_IMAGES']:
-            sex_args['overwrite_params']['WEIGHT_IMAGE'] = 'MAP_WEIGHT'
+            sex_args['overwrite_params']['WEIGHT_IMAGES'] = 'MAP_WEIGHT'
 
-            if extension is not False:
-                weight_suffix = '_%i.weight' % extension
-            else:
-                weight_suffix = '.weight'
+            sex_args['overwrite_params']['WEIGHT_IMAGES'] = \
+                os.path.join(self.settings['WEIGHT_IMAGES'],
+                             os.path.basename(tmp_image).replace(
+                             '.fits', weight_suffix))
 
-            sex_args['overwrite_params']['WEIGHT_IMAGE'] = os.path.join(self.settings['WEIGHT_IMAGES'],
-                                                           os.path.basename(image).replace(
-                                                           '.fits', weight_suffix))
-
-        if self.log.level <= 10:  # if we're at DEBUG log level, print SExtractor output
+        # if we're at DEBUG log level, print SExtractor output
+        if self.log.level <= 10:
             sex_args['overwrite_params']['VERBOSE_TYPE'] = 'NORMAL'
 
         # ------
@@ -437,54 +497,22 @@ class Pipeline:
         os.system(cmd)
 
         # ------
-        with fits.open(image) as exposure:
+        with fits.open(tmp_image) as exposure:
             # Make .ahead file with the EPOCH in MJD for SCAMP
             # Following http://www.astromatic.net/forum/showthread.php?tid=501
-            date_obs = unpack_header_kw(exposure, self.settings['DATE-OBS'], self.sci_ext)
+            date_obs = utils.unpack_header_kw(exposure,
+                                              self.settings['DATE-OBS'],
+                                              self.sci_ext)
             mjd = Time(date_obs, format=self.date_obs_fmt).mjd
 
             with open(os.path.splitext(cat)[0] + '.ahead', 'w+') as file:
                 for hdu in exposure:
                     file.write('MJD-OBS = %.6f\nEND\n' % mjd)
+
+        # Remove cleaned image copy
+        os.remove(tmp_image)
+
         return cat, date_obs
-
-
-    def run_SExtractor(self):
-        ''' Wrapper for SExtractor run.  Adds progress bar.'''
-
-        print(f'{"-" * self.term_size}')
-        self.SExtractor_catalogues = []
-
-        observation_epochs = []
-        # Add progress bar
-        #if not self.args.quiet:
-        #    sys.stdout.write('[%s]' % (' ' * (self.term_size - len_of_exp_string)))
-        #    sys.stdout.flush()
-        #    sys.stdout.write('\b' * ((self.term_size - len_of_exp_string)))
-
-        with tqdm(total=len(self.images), desc='Creating source catalogues', unit='imgs') as pbar:
-            for image in self.images:
-
-                if self.settings['SCI_EXTENSION']:
-
-                    for extension in self.settings['SCI_EXTENSION']:
-                        cat, date_obs = self._run_SExtractor_on_single_image(image, extension)
-                        observation_epochs.append(date_obs)
-                        self.SExtractor_catalogues.append(cat)
-
-                else:
-                    cat, date_obs = self._run_SExtractor_on_single_image(image, False)
-                    observation_epochs.append(date_obs)
-                    self.SExtractor_catalogues.append(cat)
-                pbar.update()
-                #if not self.args.quiet:
-                #    sys.stdout.write(int((self.term_size - len_of_exp_string) / len(self.images)) * '=')
-                #    sys.stdout.flush()
-
-
-        # Sort the SExtractor catalogues by their observation epochs, important for SCAMP
-        self.SExtractor_catalogues = [cat for _, cat in sorted(zip(observation_epochs,
-                                                               self.SExtractor_catalogues))]
 
     def run_SCAMP(self, crossid_radius=None, full_name='full.cat',
                   merged_name='merged.cat', keep_refcat=False,
@@ -528,8 +556,9 @@ class Pipeline:
         if crossid_radius is not None:
             scamp_args['overwrite_params']['CROSSID_RADIUS'] = str(crossid_radius)
 
-        if not self.args.scamp and os.path.isfile(self.merged_cat) and os.path.isfile(self.full_cat):
-            if pattern_matching: # suppress this message in case SCAMP is run twice
+        if not self.args.scamp and os.path.isfile(self.merged_cat)\
+           and os.path.isfile(self.full_cat):
+            if pattern_matching: # suppress this message if SCAMP runs twice
                 self.log.info('\nReading SCAMP catalogues from file..\n')
             scamp_from_file = True
 
@@ -548,6 +577,9 @@ class Pipeline:
             scamp_from_file = False
 
         # Create the full catalog as pipeline property
+        if not os.path.isfile(self.full_cat):
+            raise PipelineDependencyError(f'SCAMP encountered a problem. Full '
+                                          f'catalogue was not created.')
         with fits.open(self.full_cat) as full:
             data = Table(full[2].data)
 
@@ -734,8 +766,8 @@ class Pipeline:
 
             if self.settings['SCI_EXTENSION']:
                 image_filename = '_'.join(os.path.splitext(
-                                            os.path.basename(self.SExtractor_catalogues[cat_number-1])
-                                                          )[0].split('_')[:-1]) + '.fits'
+                    os.path.basename(self.SExtractor_catalogues[cat_number-1])
+                                              )[0].split('_')[:-1]) + '.fits'
             else:
                 image_filename = os.path.basename(self.SExtractor_catalogues[cat_number-1]).replace('.cat', '.fits')
 
@@ -744,14 +776,30 @@ class Pipeline:
         # Add image metadata. Have to use the correct header extension
         for image_filename, group in self.sources.groupby(['IMAGE_FILENAME']):
 
-            extension = group.EXTENSION.values[0]
-            # Add exposure keywords
-            with fits.open(os.path.join(self.paths['images'], image_filename)) as exposure:
-                for prop in ['OBJECT', 'DATE-OBS', 'FILTER', 'EXPTIME', 'RA_IMAGE', 'DEC_IMAGE']:
-                    self.sources.loc[group.index, prop] = date_obs = unpack_header_kw(exposure, self.settings[prop.split('_')[0]], extension)
+            extension = group.EXTENSION.values[0] - 1
 
-        self.sources['MID_EXPOSURE_MJD'] = self.sources.apply(lambda x: ( Time(x['DATE-OBS'], format=self.date_obs_fmt) +
-                                                                       float(x['EXPTIME']) / 2 * u.second).mjd, axis=1)
+            # Add exposure keywords
+            with fits.open(os.path.join(self.paths['images'],
+                           image_filename)) as exp:
+                for prop in ['DATE-OBS', 'FILTER',
+                             'EXPTIME']:
+                    self.sources.loc[group.index, prop] =\
+                            utils.unpack_header_kw(exp,
+                                    self.settings[prop.split('_')[0]],
+                                                  extension)
+
+                ra, dec = utils.compute_image_center(exp[extension].header)
+                self.sources.loc[group.index, 'RA_IMAGE'] = ra
+                self.sources.loc[group.index, 'DEC_IMAGE'] = dec
+
+                object_ = utils.unpack_header_kw(exp, 'OBJECT', extension)
+                if object_ is False:
+                    object_ = np.nan
+                self.sources.loc[group.index, 'OBJECT'] = object_
+
+        self.sources['MID_EXPOSURE_MJD'] = self.sources.apply(lambda x: (
+                        Time(x['DATE-OBS'], format=self.date_obs_fmt) +
+                        (float(x['EXPTIME']) / 2) * u.second).mjd, axis=1)
 
 
     def execute_analysis(self, step_name):
@@ -762,51 +810,74 @@ class Pipeline:
         ------
         step_name - str, name of analysis step
         '''
-        self.sources = ANALYSIS_STEPS[step_name](self.sources, self.settings, self.log,
-                                      self.paths, self.args)
+        self.sources = ANALYSIS_STEPS[step_name](self.sources, self.settings,
+                                                 self.log, self.paths,
+                                                 self.args)
 
 
     def save_and_cleanup(self):
-        ''' Clean up the final database.  Rename columns, remove unnecessary columns. '''
+        ''' Clean up the final database
+        Rename columns, remove unnecessary columns. '''
 
-        self.sources.drop(columns=['ASTR_INSTRUM', 'PHOT_INSTRUM'], inplace=True)
+        self.sources.drop(columns=['ASTR_INSTRUM', 'PHOT_INSTRUM'],
+                          inplace=True)
 
-        self.sources.rename(index=str, columns={'ALPHA_J2000': 'RA', 'DELTA_J2000': 'DEC', 'PMALPHA_J2000': 'PMRA',
-                                                'PMALPHAERR_J2000': 'PMRA_ERR', 'PMDELTA_J2000': 'PMDEC',
-                                                'PMDELTAERR_J2000': 'PMDEC_ERR', 'SKYBOT_PMALPHA': 'SKYBOT_PMRA',
-                                                'SKYBOT_PMDELTA': 'SKYBOT_PMDEC', 'SKYBOT_ALPHA': 'SKYBOT_RA',
-                                                'SKYBOT_DELTA': 'SKYBOT_DEC', 'FLUX_AUTO': 'FLUX',
-                                                'FLUXERR_AUTO': 'FLUXERR'}, inplace=True)
+        self.sources.rename(index=str,
+                            columns={'ALPHA_J2000': 'RA',
+                                     'DELTA_J2000': 'DEC',
+                                     'PMALPHA_J2000': 'PMRA',
+                                     'PMALPHAERR_J2000': 'PMRA_ERR',
+                                     'PMDELTA_J2000': 'PMDEC',
+                                     'PMDELTAERR_J2000': 'PMDEC_ERR',
+                                     'FLUX_AUTO': 'FLUX',
+                                     'FLUXERR_AUTO': 'FLUXERR'}, inplace=True)
 
         # Rearrange columns
-        ordered_columns = ['SOURCE_NUMBER', 'CATALOG_NUMBER', 'RA', 'DEC', 'EPOCH', 'MAG', 'MAGERR', 'FLUX', 'FLUXERR',
-                           'PM', 'PMERR', 'PMRA',  'PMRA_ERR', 'PMDEC', 'PMDEC_ERR', 'MID_EXPOSURE_MJD', 'DATE-OBS',
-                           'EXPTIME', 'OBJECT', 'FILTER', 'RA_IMAGE', 'DEC_IMAGE', 'IMAGE_FILENAME',
-                           'EXTENSION', 'XWIN_IMAGE', 'YWIN_IMAGE', 'AWIN_IMAGE', 'ERRAWIN_IMAGE', 'BWIN_IMAGE',
-                           'ERRBWIN_IMAGE', 'THETAWIN_IMAGE', 'ERRTHETAWIN_IMAGE', 'ERRA_WORLD', 'ERRB_WORLD',
-                           'ERRTHETA_WORLD', 'FLAGS_EXTRACTION', 'FLAGS_SCAMP', 'FLAGS_IMA', 'FLAGS_SSOS']
+        ordered_columns = ['SOURCE_NUMBER', 'CATALOG_NUMBER', 'RA', 'DEC',
+                           'EPOCH', 'MAG', 'MAGERR', 'FLUX', 'FLUXERR',
+                           'PM', 'PMERR', 'PMRA',  'PMRA_ERR', 'PMDEC',
+                           'PMDEC_ERR', 'MID_EXPOSURE_MJD', 'DATE-OBS',
+                           'EXPTIME', 'OBJECT', 'FILTER', 'RA_IMAGE',
+                           'DEC_IMAGE', 'IMAGE_FILENAME', 'EXTENSION',
+                           'XWIN_IMAGE', 'YWIN_IMAGE', 'AWIN_IMAGE',
+                           'ERRAWIN_IMAGE', 'BWIN_IMAGE', 'ERRBWIN_IMAGE',
+                           'THETAWIN_IMAGE', 'ERRTHETAWIN_IMAGE', 'ERRA_WORLD',
+                           'ERRB_WORLD', 'ERRTHETA_WORLD', 'FLAGS_EXTRACTION',
+                           'FLAGS_SCAMP', 'FLAGS_IMA', 'FLAGS_SSOS']
 
         if self.settings['FIXED_APER_MAGS']:
-            ordered_columns[7:7] = ['MAG_CI', 'MAGERR_CI', 'FLUX_CI', 'FLUXERR_CI']
+            ordered_columns[7:7] = ['MAG_APER', 'MAG_APER_ERR', 'FLUX_APER',
+                                    'FLUX_APER_ERR']
 
         if self.settings['CROSSMATCH_SKYBOT']:
-            ordered_columns[22:22] = ['SKYBOT_NUMBER', 'SKYBOT_NAME', 'SKYBOT_CLASS', 'SKYBOT_MAG',
-                                      'SKYBOT_RA', 'SKYBOT_DEC', 'SKYBOT_PMRA', 'SKYBOT_PMDEC']
+            ordered_columns[22:22] = ['MATCHED', 'SKYBOT_NUMBER', 'SKYBOT_NAME',
+                                      'SKYBOT_CLASS', 'SKYBOT_MAG',
+                                      'SKYBOT_RA', 'SKYBOT_DEC',
+                                      'SKYBOT_PMRA', 'SKYBOT_PMDEC',
+                                      'SKYBOT_DELTARA', 'SKYBOT_DELTADEC']
+            self.sources['SKYBOT_NUMBER'].replace('', np.nan, inplace=True)
+            self.sources['SKYBOT_NUMBER'] =\
+                    self.sources['SKYBOT_NUMBER'].astype('Int64')
 
-        self.sources = self.sources[ordered_columns]
+        self.sources = self.sources.reindex(columns=ordered_columns)
 
         # Save final database
         output = Table.from_pandas(self.sources)
-        output_filename = os.path.join(self.paths['cats'], 'ssos_{:s}.csv'.format(time.strftime('%Y%m%d%H%M%S', self.start_time)))
+        output_filename = os.path.join(self.paths['cats'],
+                           f'ssos_'
+                           f'{time.strftime("%Y%m%d%H%M%S", self.start_time)}'
+                           f'.csv')
         output.write(output_filename, format='csv', overwrite=True)
 
-        os.system('rm -r %s' % self.paths['tmp'])
+        shutil.rmtree(self.paths['tmp'])
         self.run_time = time.time() - time.mktime(self.start_time)
 
 
 class PipelineSettingsException(Exception):
     pass
 
+class PipelineDependencyError(Exception):
+    pass
 
 class NoSourcesRemainingException(Exception):
     pass

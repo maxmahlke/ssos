@@ -1,7 +1,22 @@
-1.2.6
+1.3
 ---
+* Included MPC parser: Calling `ssos --mpc path/to/csv` on the ssos output
+  creates a textfile with the observations formatted for MPC submission
+* Included checkplots: Optional analysis steps, see online documentation SKYBOT_RESIDUALS,SKYBOT_PM
+* Output now contains three more columns. `MATCHED`, containing a boolean value
+  with True if object was matched to known SSO, else False. `SKYBOT_DELTARA` and `SKYBOT_DELTADEC`, which are the residuals of the recovered and the predicted position of each match SSO detection in arcsecond
+* MAG_CI and MAG_ERR_CI are renamed to MAG_APER and MAG_APER_ERR to better
+  reflect the constant-aperture mode. Same for FLUX_CI and FLUXERR_CI
+* The images are now explicitly checked for valid WCS keywords in the header
+* Original fits files are no longer edited to fix their headers. Instead, a temporary copy is created. The FIX_HEADER keyword is removed from the settings.
+* Specifying the RA, DEC, OBJECT keywords is no longer required
 * Included a check on the SCAMP flag 64 in the linear motion filter
+* The SkyBoT output CSV file has been moved to the cats subdirectory
+* Progressbar for SkyBoT queries
+* SKYBOT_NUMER is now NaN instead of '-' for known but unnumbered objects
+* Renamed the inspect module to fix clash with astropy naming
 * A change in the pandas API requires an up-to-date tqdm version. This is now enforced upon installation
+
 1.2.5
 ---
 * Including preprocessing steps: Certain FITS header keywords stop SCAMP from computing the astrometric solution. If FIX_HEADER is set to True, these keywords are removed from the original images. Further, the projection parameters CTYPE are changed from ZPN to TAN if necessary

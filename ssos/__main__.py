@@ -1,16 +1,24 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 '''
-  Pipeline to search for Solar System objects in wide-field imaging surveys
-  Information on the project can be found in arXiv:1711.02780
+    Author: Max Mahlke
+    Date: 16 December 2019
 
-  For questions, contact max.mahlke (at) cab.inta-csic.es
+    Pipeline to search for Solar System objects in wide-field imaging surveys
+    Information on the project can be found in arXiv:1711.02780
+    and arXiv:1906.03673
 
-  Max Mahlke, August 2018
+    For questions, contact max.mahlke (at) oca.eu
+
+    Call as:        ssos
 '''
 
 import os
+import shutil
 import sys
 import time
+
 
 if len(sys.argv) == 1:
     from ssos import GREETING
@@ -19,13 +27,20 @@ if len(sys.argv) == 1:
 
 if sys.argv[1] in ['-d', '--default']:
     path_to_module = os.path.dirname(__file__)
-    os.system('cp -i -r {%s,%s} .' % (os.path.join(path_to_module, 'semp'),
-                                   os.path.join(path_to_module, 'default.ssos')))
+    shutil.copytree(os.path.join(path_to_module, 'semp'),
+                    os.path.join(os.getcwd(), 'semp'))
+    shutil.copy(os.path.join(path_to_module, 'default.ssos'),
+                os.path.join(os.getcwd(), 'default.sso'))
     sys.exit()
 
 elif sys.argv[1] in ['-i', '--inspect']:
-    from ssos.inspect import inspectCutouts
+    from ssos.ins import inspectCutouts
     inspectCutouts(sys.argv[2:])
+    sys.exit()
+
+elif sys.argv[1] in ['-m', '--mpc']:
+    from ssos.utils import convert_to_mpc
+    convert_to_mpc(sys.argv[2])
     sys.exit()
 
 
@@ -49,7 +64,8 @@ def main():
         pipeline.run_SCAMP(crossid_radius=1, full_name='full_stars.cat',
                            merged_name='merged_stars.cat', keep_refcat=True,
                            adjust_SExtractor_and_aheader=True)
-        pipeline.run_SCAMP(crossid_radius=pipeline.args.CROSSID_RADIUS, solve_astronomy=False, pattern_matching=False)
+        pipeline.run_SCAMP(crossid_radius=pipeline.args.CROSSID_RADIUS,
+                           solve_astronomy=False, pattern_matching=False)
 
     else:
         pipeline.run_SCAMP(crossid_radius=pipeline.args.CROSSID_RADIUS)

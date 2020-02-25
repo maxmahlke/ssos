@@ -13,12 +13,12 @@ Input files are the survey images, passed to the pipeline in one directory:
 
 The images **must** have a ``.fits`` file ending to be recognized by the script.
 
-If weight images shall be passed to the SExtractor runs, specify the directory containing the weight images using the `WEIGHT_IMAGES` parameter in the ``default.ssos``. The weight images need to have the same filename as the exposures they shall be applied on, but with a ``_SCI_EXTENSION.weight`` file extension replacing the ``.fits``, where `SCI_EXTENSION` has to be replaced by the appropriate extension integer.
+If weight images shall be passed to the SExtractor runs, specify the directory containing the weight images using the `WEIGHT_IMAGES` parameter in the ``default.ssos``. The weight images need to have the same filename as the exposures they shall be applied on, but with a ``_SCI_EXTENSION.weight`` file extension replacing the ``.fits``, where `SCI_EXTENSION` has to be replaced by the appropriate extension integer. If no science extension is specified (equivalent to setting `SCI_EXTENSION` to ``all``), simply replace the ``.fits`` extension with ``.weight``.
 
 Output Files
 ============
 
-The script creates several directories in the target directory (CWD by default). The cats directory contains the SExtractor and SCAMP catalogues and the final output `ssos_$CURRENTDATETIME.csv`. For every SExtractor catalogue, there is also one .ahead file with the same filename. This file contains the observation date as MJD-OBS keyword, which is required for the subsequent run of SCAMP. SCAMP looks for extensions of catalogue headers in .ahead files.
+The script creates several directories in the target directory (current working directory unless specified with the ``-t`` option). The cats directory contains the SExtractor and SCAMP catalogues and the final output `ssos_$CURRENTDATETIME.csv`. For every SExtractor catalogue, there is also one .ahead file with the same filename. This file contains the observation date as MJD-OBS keyword, which is required for the subsequent run of SCAMP. SCAMP looks for extensions of catalogue headers in .ahead files.
 
 
 ::
@@ -36,7 +36,11 @@ The script creates several directories in the target directory (CWD by default).
   │      full_1.cat
   │      merged_1.cat
   │      scamp.xml
+  │      skybot_all.csv
   │      ssos.csv
+  │
+  └───checkplots
+  │      skybot_residuals.png
   │
   └───cutouts
   │      SOURCE1_CATALOG1.fits
@@ -46,11 +50,6 @@ The script creates several directories in the target directory (CWD by default).
   │
   └───logs
   │      ssos_$DATETIME.log
-  │
-  └───skybot
-  │      skybot_query_string1.xml
-  │      skybot_query_string2.xml
-  │      ..
   │
   └───weights
   │      exposure1.weight  *optional*
@@ -155,6 +154,7 @@ The final database contains the following columns
     RA_EXP - Center right ascension coordinate of exposure
     DEC_EXP - Center declination coordinate of exposure
     FILENAME_EXP - Filename of input image that the SSO was detected in
+    MATCHED - Boolean value, true if SSO was matched to known object
     SKYBOT_NAME - If matched, name of matching SSO
     SKYBOT_CLASS - Class of SkyBoT match
     SKYBOT_MAG - Predicted magnitude
@@ -163,6 +163,8 @@ The final database contains the following columns
     SKYBOT_PMRA - Predicted PM in RA
     SKYBOT_PMDEC - Predicted PM in Dec
     SKYBOT_NUMBER - SkyBoT match number
+    SKYBOT_DELTARA - Residual of observed and predicted RA in arcsecond
+    SKYBOT_DELTADEC - Residual of observed and predicted Dec in arcsecond
     X_IMAGE - position of source in exposure in X in pixel
     Y_IMAGE - position of source in exposure in Y in pixel
     AWIN_IMAGE - Semi-major axis of fitted source ellipse in pixel

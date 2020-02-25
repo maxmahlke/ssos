@@ -20,7 +20,8 @@ The ``ssos`` pipeline is available from the Python Package Index via [#]_
 
 Alternatively, you can clone the `GitHub Repository <https://github.com/maxmahlke/ssos>`_ or download the `zip file <https://github.com/maxmahlke/ssos/archive/master.zip>`_.
 
-The pipeline requires the following additional `python` packages: `astropy`, `numpy`, `pandas`, `scipy`, and `statsmodels`. You can install them using the following command within the package directory
+If not installing with `pip`, the package dependencies can be installed by
+running the following line within the package directory
 
 .. code-block:: bash
 
@@ -39,7 +40,7 @@ Make sure that the astrOmatic binaries :bash:`sex`, :bash:`scamp`, and :bash:`sw
     $ sex --version
     SExtractor version 2.25.0
     $ scamp --version
-    SCAMP version 2.7.7
+    SCAMP version 2.7.8
     $ swarp --version
     SWarp version 2.38.1
 
@@ -49,7 +50,7 @@ After installing, you can verify that the install worked by entering ``ssos`` fr
 Pipeline Setting Files
 ======================
 
-The default ``default.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/ssos/default.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and default values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.html>`_ page.
+The default ``default.ssos`` file can be `found here <https://github.com/maxmahlke/ssos/blob/master/ssos/default.ssos>`_. It is a plain ASCII, designed very similar to the configuration files of SExtractor and SCAMP in order to make the user feel right at home. Short descriptions and default values of the parameters are below, for more detailed descriptions refer to the `Pipeline <pipeline.html>`_ page.
 
 .. note::
     The default configuration file ``default.ssos`` and the auxiliary SExtractor, SCAMP, and SWARP setup files are included in the ``python`` package and can be copied to the current working directory using the :bash:`ssos -d` or :bash:`ssos --default` syntax.
@@ -67,19 +68,13 @@ The default ``default.ssos`` file can be `found here <https://github.com/maxmahl
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     | Parameter             | Values  | Examples                        |Description                                                                |
     +=======================+=========+=================================+===========================================================================+
-    | `SCI_EXTENSION`       | integer | 1 |  2 | 1,2                    | Index of science extension of FITS images. For details, see               |
+    | `SCI_EXTENSION`       | mixed   | 1 |  2 | 1,2 | all              | Index of science extension of FITS images. For details, see               |
     |                       |         |                                 | :ref:`sextractor_section`.                                                |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `WEIGHT_IMAGES`       | bool    | False | /tmp/weights            | Absolute path to weight images for SExtractor run. [#]_ If False,         |
+    | `WEIGHT_IMAGES`       | mixed   | False | /tmp/weights            | Absolute path to weight images for SExtractor run. [#]_ If False,         |
     |                       |         |                                 | SExtractor runs with settings according to ``ssos.sex`` file.             |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `RA`                  | string  | RA / RADEG / CRVAL1             | FITS header keyword of right ascension in degree  [#]_                    |
-    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `DEC`                 | string  | DEC / DECDEG / CRVAL2           | FITS header keyword of declination in degree                              |
-    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `OBJECT`              | string  | OBJECT                          | FITS header OBJECT keyword                                                |
-    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
-    | `DATE-OBS`            | string  | DATE-OBS / DATE                 | FITS header keyword for observation date in ISOT format                   |
+    | `DATE-OBS`            | string  | DATE-OBS / DATE                 | FITS header keyword for observation date in ISOT or MJD format            |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
     | `FILTER`              | string  | FILTER                          | FITS header keyword for observation filter/band                           |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
@@ -181,6 +176,9 @@ The default ``default.ssos`` file can be `found here <https://github.com/maxmahl
     | `REFERENCE_FILTER`    | string  |         gSDSS,uSDSS             | Filter to use as reference in SExtractor dual-image mode runs. Value has  |
     |                       |         |                                 | to correspond to `FILTER` keyword in FITS header. See :ref:`optional`.    |
     +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
+    | `CHECKPLOTS`          | string  |SKYBOT_RESIUDALS,SKYBOT_PM,False | Checkplots to create. False for no checkplots, otherwise a comma-separated|
+    |                       |         |                                 | list of possible checkplots, given in :ref:`optional`.                    |
+    +-----------------------+---------+---------------------------------+---------------------------------------------------------------------------+
 
 The configuration file can be formatted with tabs and spaces. Comments are marked with `#`. Lines beginning with # or newline characters are ignored.
 
@@ -212,14 +210,24 @@ to copy the default configurations files into this directory. Adjust the `SEX_CO
 
 7. If an SSO is correctly linked up by SCAMP, it is removed by the filter pipeline. Adjust the settings in the ``ssos`` config file.
 
-8. Inspect the output candidates: After running ``ssos`` with `EXTRACT_CUTOUTS` set to `True`, you can quickly inspect the output candidates sample by running
+8. Inspect the checkplots and output candidates: After running ``ssos`` with `EXTRACT_CUTOUTS` set to `True`, you can quickly inspect the output candidates sample by running
 
 .. code-block:: bash
 
     $ ssos --inspect path/to/output/folder
 
 
-where the output folder is the directory which contains the `cats` and `cutouts` directories. You are then shown videos of the recovered sources one after the other and can quickly classify them using the arrow keys: "left arrow" for artifact, "right arrow" for asteroid, "up arrow" for unknown/unclear. These classifications are saved in the output `csv` database. If a candidate was matched to a SkyBoT source, its designation is printed in the upper left part of the video.
+where the output folder is the directory which contains the `cats` and `cutouts` directories. You are then shown videos of the recovered sources one after the other and can quickly classify them using the arrow keys: "left arrow" for artifact, "right arrow" for asteroid, "up arrow" for unknown/unclear. These classifications are saved in the output `csv` database. If a candidate was matched to a SkyBoT source, its designation is printed in the upper left part of the animation.
+
+9. Once you are confident about the recovered candidates, the accuracy of the
+   positions (check the `SKYBOT_RESIDUALS` checkplot), and included calibrated
+   magnitudes as `MAG_CALIB` column to the database, you can run 
+
+.. code-block:: bash
+
+    $ ssos --mpc path/to/output/csv
+
+on the pipeline CSV output file to convert it to the MPC submission format.
 
 Apart from the ``default.ssos`` parameters listed above, you likely have to adjust the following files and parameters before running it the first time, mostly by setting them to the appropriate FITS header keywords of your images:
 
@@ -267,6 +275,5 @@ After these initial changes, you should experiment with the different SExtractor
 
 
 .. [#] The installation might fail if the ``pip`` tool is outdated, due to a change in the PyPI retrievals. If this is the case, run :bash:`$[sudo] pip install --upgrade pip` and repeat the install.
-.. [#] One day, FITS header keywords will be standardized. Until then, you have to adjust these parameters.
 .. [#] The implementation does not allow for empty strings (e.g. to point to the current working directory). Instead, put the absolute path.
 

@@ -33,8 +33,16 @@ def press(event, ssos, index, source_number):
 
 def inspectCutouts(ana_dirs):
 
+    # cheap hack for CMD API
+    if '--force' in ana_dirs:
+        force = True
+    else:
+        force = False
 
     for ana_dir in ana_dirs:
+
+        if ana_dir == '--force':
+            continue
 
         try:
             sso_path = os.path.join(sorted([os.path.join(ana_dir, 'cats/', csv) for csv in
@@ -53,6 +61,10 @@ def inspectCutouts(ana_dirs):
             ssos['INSPECTED'] = False
             ssos['ASTEROID'] = False
             ssos['UNKNOWN'] = False
+        elif not force:
+            print(f'Already inspected {ana_dir}, skipping. Use --force to '
+                  f' override this behaviour.')
+            continue
 
 
         for sn, sso in ssos.groupby('SOURCE_NUMBER'):

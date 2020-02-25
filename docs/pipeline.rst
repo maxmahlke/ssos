@@ -22,6 +22,11 @@ The SExtractor configuration as set in ``ssos.sex`` requires two more files, the
 
 Unless the path parameters above are set using absolute paths, the pipeline will look for the files in the directory it is executed in.
 
+Before running SExtractor, all input images are checked for valid WCS keywords
+in their headers. As pre-existing projection parameters interfer with running
+SCAMP, they are removed by creating a temporary copy of each image and editing
+the header inplace. The original images are not edited.
+
 Finally, using the `SCI_EXTENSION`, the user has to provided the index of the science extension of the FITS image. It is common case that data is provided in multi-extension FITS format, where besides the science data also weight images and other supplementary data is stored in the FITS file. Therefore, the user has to specify the science extension. Multiple extensions are allowed as well, if for example different CCD images were stored in the same file. The valid values are integers, separated by commas if multiple extensions should be analysed, e.g. **0**, **1**, or **1,2**.
 
 If you are unsure which extension contains your image, you can trial run SExtractor with the following syntax and check the output catalogues:
@@ -35,7 +40,7 @@ If you are unsure which extension contains your image, you can trial run SExtrac
     Searching multiple extensions at the same time only makes sense if the field-of-views overlap. Otherwise, running the pipeline on the extensions separately will yield better results.
 
 
-The SEXtractor output catalogues will be called ``image_file_SCI_EXTENSION.cat`` [#]_.
+The SEXtractor output catalogues will be called ``image_file_$SCI_EXTENSION.cat`` [#]_.
 After the SExtractor run, the input images are checked for the `MJD-OBS` header keyword.
 If it does not exist, the `DATE-OBS keyword` is read in, converted to MJD, and saved in an ``.ahead`` file with the same filename structure as the SExtractor catalog. This additional header file is important for the subsequent SCAMP run.
 
@@ -54,8 +59,6 @@ Once SCAMP has matched the SExtractor catalogues, it creates among others two ca
 
     The SExtractor and SCAMP runs are the computationally most challenging parts of this pipeline and therefore the bottlenecks in execution time. To allow for quick pipeline runs in order to find the optimal settings, the script checks for the existence of the output catalogues before running the software. If the catalogues already exist, these steps are skipped. This behaviour can be overruled by setting the ``--sex``, ``--scamp``, and ``--swarp`` flags in the pipeline call.
 
-
-**Removing Reference Source Detections** - v.1.2.0
 
 The reference catalogue used by SCAMP can be used to identify stars and galaxies in the images. Removing these sources from the catalogues before SCAMP associates the source detections over epochs can increase the chance of succesful detections. Setting the `REMOVE_REF_SOURCES` parameter to true will execute SCAMP twice: First, with a cross-match radius of 1", linking all stars and galaxy detections (and any other source detection within that radius). Sources which were matched a certain number of times and to a source in the reference catalogue are then flagged in the SExtractor catalogues. Finally, the astrometric solution derived by SCAMP is added to the `.ahead` files.
 SCAMP is then re-run, with the astrometric solution provided and the cross-match radius as set in the configuration file. Only transient sources should be included in the pattern matching sample.
@@ -194,6 +197,22 @@ After the fixed aperture magnitudes are calculated, the columns `MAG_CI` and `MA
 
 If the cutout extraction with SWARP was set to False, the cutouts will be created in this step and saved to a temporary folder, which is deleted after the pipeline finishes.
 
+Create checkplots
+---------------------------------
+Setting: `CHECKPLOTS`  |  Parameters: `SKYBOT_PM`, `SKYBOT_RESIDUALS`
+
+Setting the `CHECKPLOTS` value to either parameter or a comma-separated list of
+them will create the checkplots in case any object was matched with a known
+asteroid.
+
+Convert to MPC submission format
+---------------------------------
+
+The `ssos` pipeline output can be converted to the MPC 80-column format using 
+
+.. code-block:: bash
+
+    $ ssos --mpc path/to/output/csv
 
 Flags
 =====
