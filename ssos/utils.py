@@ -44,6 +44,8 @@ def init_argparse():
                         help=f'Copy default setup files to CWD')
     parser.add_argument('-i', '--inspect', action='store_true',
                         help=f'Launch visual inspection of SSO candidates')
+    parser.add_argument('-m', '--mpc', action='store_true',
+                        help=f'Generate MPC report from output CSV file')
     parser.add_argument('-l', '--log', action='store', dest='log', nargs=1,
                         help=f'Set the logging level. Valid arguments are '
                              f'DEBUG, INFO, WARNING, ERROR, CRITICAl',
