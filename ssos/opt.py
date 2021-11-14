@@ -452,13 +452,24 @@ def crossmatch_skybot(sources, settings, log, paths, args):
                 best_match_number = sources.loc[best_match, 'SKYBOT_NUMBER']
 
                 # Overwrite metadata of detections not matched to best match
-                sources.loc[source[source.SKYBOT_NAME !=
-                                   best_match_name].index, skybot_columns] =\
-                                       [best_match_name, best_match_number,
-                                        '', '', '', '', '', '']
+                sources.loc[
+                    source[source.SKYBOT_NAME != best_match_name].index, skybot_columns
+                ] = [
+                    True,
+                    best_match_name,
+                    best_match_number,
+                    "",
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                ]
 
-    n_matches = len(set(sources[sources.MATCHED]['SOURCE_NUMBER']))
-    log.info(f' {n_matches} matched.\n')
+    n_matches = len(set(sources[sources.MATCHED]["SOURCE_NUMBER"]))
+    log.info(f" {n_matches} matched.\n")
     return sources
 
 
