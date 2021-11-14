@@ -362,7 +362,7 @@ def _cross_match(source, skybot, radius):
 
 def _compute_pm_difference_angle(row):
     # returns the angle between the skybot and source proper motion vectors
-    skybot_pm = np.array([row.SKYBOT_PMALPHA, row.SKYBOT_PMDELTA])
+    skybot_pm = np.array([row.SKYBOT_PMRA, row.SKYBOT_PMDEC])
 
     try:
         skybot_pm /= np.linalg.norm(skybot_pm)
