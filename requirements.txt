@@ -2,6 +2,7 @@ astropy
 matplotlib
 numpy
 pandas
+sbpy
 scipy
 statsmodels
 tqdm

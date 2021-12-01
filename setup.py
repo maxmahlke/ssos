@@ -6,7 +6,7 @@ with open('README.md', 'r') as rm:
 
 setup(
     name='ssos',
-    version='1.3',
+    version='1.3.1',
     description=f'The ssos Pipeline - Detection of Solar System Objects '
                 f'in astronomical images',
     url='https://github.com/maxmahlke/ssos',
