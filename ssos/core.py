@@ -87,15 +87,7 @@ class Pipeline:
         self.settings = self._check_settings(self.settings)
 
         # Check for presence of WCS header information
-        wcs_present, ra, dec, object_ = utils.check_wcs(
-            self.images, self.sci_ext, self.log
-        )
-        if not wcs_present:
-            raise PipelineDependencyError(
-                f"The images do not contain valid WCS"
-                f" information in the header. Is the"
-                f" SCI_EXTENSION correct?"
-            )
+        ra, dec, object_ = utils.check_wcs(self.images, self.sci_ext, self.log)
 
         # Print basic info
         self._print_field_info(ra, dec, object_)

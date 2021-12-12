@@ -277,7 +277,11 @@ def check_wcs(images, sci_ext, log):
                         f"\n\nWCS header check failed for {image}, keyword"
                         f" {kw} not present.\n\n"
                     )
-                    return False, "", "", ""
+                    raise PipelineDependencyError(
+                        f"The images do not contain valid WCS"
+                        f" information in the header. Is the"
+                        f" SCI_EXTENSION correct?"
+                    )
 
             if i == 0:
                 # Check for OBJECT keyword
