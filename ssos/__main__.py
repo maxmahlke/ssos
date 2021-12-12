@@ -1,17 +1,12 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """
-    Author: Max Mahlke
-    Date: 16 December 2019
-
     Pipeline to search for Solar System objects in wide-field imaging surveys
     Information on the project can be found in arXiv:1711.02780
     and arXiv:1906.03673
 
     For questions, contact max.mahlke (at) oca.eu
 
-    Call as:        ssos
+    Call as:    ssos
 """
 
 import os

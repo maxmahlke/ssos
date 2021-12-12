@@ -1,11 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-    Author: Max Mahlke
-    Date: 16 December 2019
-    Helper functions of the ssos pipeline
-"""
+""" Utility functions for the ssos pipeline. """
 
 import argparse
 import logging
@@ -199,7 +193,7 @@ def init_logger(args, log_dir):
         log.addHandler(stdout_log)
 
     def log_excepthook(execption_type, exception_value, traceback, logger=log):
-        """ Function to pipe tracebacks into the logfile """
+        """Function to pipe tracebacks into the logfile"""
         log.error(
             "Exception occurred during analysis: \n",
             exc_info=(execption_type, exception_value, traceback),

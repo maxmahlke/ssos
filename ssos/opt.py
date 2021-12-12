@@ -1,13 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-    Author: Max Mahlke
-    Date: 16 December 2019
-
-    Extraction of cutouts of SSOs using SWarp,
-    cross-matching with the SkyBoT database, and other analyses.
-"""
+""" Optional analysis steps for the ssos pipeline. """
 
 import os
 

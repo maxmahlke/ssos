@@ -1,8 +1,9 @@
-name = 'ssos'
-__version__ = '1.3.1'
+name = "ssos"
+__version__ = "1.3.2"
 
 
-GREETING = '''
+GREETING = (
+    """
        *       +      ssos %s
    +        x
         '             https://ssos.readthedocs.io
@@ -14,4 +15,6 @@ O -     *        '    ssos [-PARAMETER] [-VALUE] path/to/images
         _..:'
   +   (_.:            max.mahlke(at)oca.eu
 
-        ''' % __version__
+        """
+    % __version__
+)

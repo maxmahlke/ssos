@@ -1,12 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-    Author: Max Mahlke
-    Date: 16 December 2019
-
-    Core functions of the ssos pipeline
-"""
+""" Core functionality of the ssos pipeline. """
 
 from collections import Counter
 import os
@@ -48,7 +41,7 @@ ANALYSIS_STEPS = {
 
 
 class Pipeline:
-    """ Class to handle the pipeline execution """
+    """Class to handle the pipeline execution"""
 
     def __init__(self):
 
@@ -384,7 +377,7 @@ class Pipeline:
         return settings
 
     def _print_field_info(self, ra, dec, object_):
-        """ Prints RA, DEC, and OBJECT keywords to log """
+        """Prints RA, DEC, and OBJECT keywords to log"""
 
         # Compute the ecliptic latitude
         coord = SkyCoord(ra, dec, frame="icrs", unit="deg")
@@ -401,7 +394,7 @@ class Pipeline:
         )
 
     def _print_skybot_results(self):
-        """ Print gimmicky SkyBoT info """
+        """Print gimmicky SkyBoT info"""
         bins = np.arange(
             np.floor(min(self.skybot.Mv)), np.ceil(max(self.skybot.Mv)), 0.5
         )
@@ -448,7 +441,7 @@ class Pipeline:
         )
 
     def run_SExtractor(self):
-        """ Wrapper for SExtractor run.  Adds progress bar."""
+        """Wrapper for SExtractor run.  Adds progress bar."""
 
         print(f'{"-" * self.term_size}')
         self.SExtractor_catalogues = []
@@ -582,7 +575,7 @@ class Pipeline:
         pattern_matching=True,
         adjust_SExtractor_and_aheader=False,
     ):
-        """ Run SCAMP on SExtractor catalogs """
+        """Run SCAMP on SExtractor catalogs"""
 
         # ------
         # Set-up SCAMP run
@@ -735,7 +728,7 @@ class Pipeline:
         return len(set(self.sources.SOURCE_NUMBER))
 
     def check_remaining(func):
-        """ Wrapper to check if source candidates remain after filter step"""
+        """Wrapper to check if source candidates remain after filter step"""
 
         def wrapped_func(*args, **kwargs):
 
