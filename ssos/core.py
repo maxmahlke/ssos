@@ -123,7 +123,7 @@ class Pipeline:
 
             self.skybot.to_csv(path_skybot, index=False)
 
-            if not self.skybot.empty:
+            if not self.skybot.empty and len(self.skybot) > 1:
                 self._print_skybot_results()
             else:
                 self.log.info(" No known SSOs returned by SkyBoT.\n")
