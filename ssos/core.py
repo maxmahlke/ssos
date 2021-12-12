@@ -57,10 +57,7 @@ class Pipeline:
         )
 
         # Print version info
-        try:
-            self.term_size = os.get_terminal_size().columns
-        except:
-            self.term_size = 80
+        self.term_size = shutil.get_terminal_size().columns
         print("\n")
         self.log.info(
             " --- ".join(
