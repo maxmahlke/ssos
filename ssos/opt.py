@@ -337,12 +337,18 @@ def compute_aperture_magnitudes(sources, settings, log, paths, args):
 
             with fits.open(catalog) as cat:
                 for prop in ["MAG", "FLUX"]:
-                    sources.loc[ind, prop + "_APER"] = cat[2].data.field(
-                        prop + "_AUTO"
-                    )[center_source_ind]
-                    sources.loc[ind, prop + "_APER_ERR"] = cat[2].data.field(
-                        prop + "ERR_AUTO"
-                    )[center_source_ind]
+                    sources.loc[ind, prop + "_APER"] = (
+                        cat[2]
+                        .data.field(prop + "_AUTO")[center_source_ind]
+                        .byteswap()
+                        .newbyteorder("=")
+                    )
+                    sources.loc[ind, prop + "_APER_ERR"] = (
+                        cat[2]
+                        .data.field(prop + "ERR_AUTO")[center_source_ind]
+                        .byteswap()
+                        .newbyteorder("=")
+                    )
 
     log.info("\tDone.\n")
 
