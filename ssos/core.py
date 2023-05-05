@@ -855,7 +855,7 @@ class Pipeline:
             self.sources.loc[group.index, "IMAGE_FILENAME"] = image_filename
 
         # Add image metadata. Have to use the correct header extension
-        for image_filename, group in self.sources.groupby(["IMAGE_FILENAME"]):
+        for image_filename, group in self.sources.groupby("IMAGE_FILENAME"):
 
             extension = group.EXTENSION.values[0] - 1
 
