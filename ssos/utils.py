@@ -354,7 +354,7 @@ def create_clean_image(image, tmp_path, update=False):
     # r'AP_ORDER', r'BP_ORDER']
 
     with fits.open(
-        image, "update" if update else "readonly", output_verify=False
+        image, "update" if update else "readonly", output_verify="ignore"
     ) as exp:
         for hdu in exp:
             # Iterate over headers and remove keywords
