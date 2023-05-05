@@ -1,8 +1,16 @@
-1.3.1
----
+1.3.3 - 2023-05-05
+------------------
+- Minor bugfixes in cutout creation
 
-- Copying the default configuration fails if the files exist in CWD
-- REFOUT_CATPATH in SCAMP can be used to put the reference catalogue into the
+1.3.2 - 2021-12
+---------------
+- Don't print skybot match statistics if the reference contains a single source
+- Catch comet designations in the skybot number column
+
+1.3.1
+-----
+* Copying the default configuration fails if the files exist in CWD
+* REFOUT_CATPATH in SCAMP can be used to put the reference catalogue into the
   cats/ directory
 
 

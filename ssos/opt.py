@@ -384,10 +384,14 @@ def _cross_match(source, skybot, radius):
     if dists.min() <= radius:
         match = skybot.iloc[dists.values.argmin()]
 
-        if not pd.isna(match["#Num"]) and match["#Num"] != " - ":
-            number = int(match["#Num"])
-        else:
-            number = np.nan
+        # Is the reference source numbered?
+        number = np.nan
+
+        if not pd.isna(match["#Num"]):
+            try:
+                number = int(match["#Num"])
+            except ValueError:
+                number = np.nan
 
         source["MATCHED"] = True
         source["SKYBOT_NUMBER"] = number
@@ -568,8 +572,8 @@ def create_checkplots(sources, settings, log, paths, args):
             ax.plot([0, 0], [ymin, ymax], ls="--", lw=0.5, color="gray")
 
             ax.set(
-                xlabel="(RA - SKYBOT_RA) * cos(DEC) / arcsec",
-                ylabel="DEC - SKYBOT_DEC / arcsec",
+                xlabel=r"(RA - SKYBOT RA) * cos(DEC) / arcsec",
+                ylabel=r"DEC - SKYBOT DEC / arcsec",
                 xlim=(xmin, xmax),
                 ylim=(ymin, ymax),
             )
@@ -599,7 +603,7 @@ def create_checkplots(sources, settings, log, paths, args):
 
             ax.set(
                 xlabel="PM / (arcsec / h)",
-                ylabel=f"sqrt((SKYBOT_PMRA)**2 + (SKYBOT_PMDEC)**2) / " f"(arcsec / h)",
+                ylabel=f"sqrt((SKYBOT PMRA)**2 + (SKYBOT PMDEC)**2) / " f"(arcsec / h)",
                 xlim=(xmin, xmax),
                 ylim=(ymin, ymax),
             )

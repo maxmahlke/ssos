@@ -247,8 +247,7 @@ def check_wcs(images, sci_ext, log):
     :images: list - absolute paths to images
     :sci_ext: int or str - index of SCI extension in images
     :log: logger instance - pipeline log
-    :returns: bool -  presence of WCS coordinates,
-              float, float - random pair of RA DEC coordinates
+    :returns: float, float - random pair of RA DEC coordinates
               str - OBJECT keyword value
     """
 
@@ -290,7 +289,7 @@ def check_wcs(images, sci_ext, log):
                 if object_ is False:
                     object_ = ""
 
-    return True, vals["CRVAL1"], vals["CRVAL2"], object_
+    return vals["CRVAL1"], vals["CRVAL2"], object_
 
 
 def compute_image_center(header):
@@ -584,3 +583,7 @@ def _magnitude(row):
     band = row["FILTER"][0]
 
     return mag, band
+
+
+class PipelineDependencyError(Exception):
+    pass

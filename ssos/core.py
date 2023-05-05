@@ -133,7 +133,7 @@ class Pipeline:
                 f"file outdated?"
             )
 
-        # Little hack for fixed apertuer magnitudes without cutout extraction
+        # Little hack for fixed aperture magnitudes without cutout extraction
         if not self.settings["EXTRACT_CUTOUTS"] and self.settings["FIXED_APER_MAGS"]:
             self.log.debug(
                 f"FIXED_APER_MAGS is True but EXTRACT_CUTOUTS is "
@@ -629,7 +629,7 @@ class Pipeline:
         # Create the full catalog as pipeline property
         if not os.path.isfile(self.full_cat):
             raise PipelineDependencyError(
-                f"SCAMP encountered a problem. Full " f"catalogue was not created."
+                f"SCAMP encountered a problem. Full catalogue was not created."
             )
         with fits.open(self.full_cat) as full:
             data = Table(full[2].data)
