@@ -71,7 +71,7 @@ def query_skybot(images, settings, sci_ext, date_obs_fmt):
             mid_epoch, ra, dec, fov, settings["OBSERVATORY_CODE"]
         )
         if not result.empty:
-            skybot = skybot.append(result)
+            skybot = pd.concat([skybot, result])
 
     return skybot
 
