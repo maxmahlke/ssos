@@ -1,5 +1,6 @@
-1.3.3 - 2023-05-05
+1.3.3 - 2023-05-16
 ------------------
+- Increase size of SkyBot query to account for out-of-view matches
 - Minor bugfixes in cutout creation
 
 1.3.2 - 2021-12

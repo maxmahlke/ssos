@@ -60,8 +60,8 @@ def query_skybot(images, settings, sci_ext, date_obs_fmt):
                     ddec = naxis2 * cdelt2
 
                 # Ensure full coverage by adding CROSSMATCH_RADIUS
-                dra = round(dra + settings["CROSSMATCH_RADIUS"] / 60, 1)
-                ddec = round(ddec + settings["CROSSMATCH_RADIUS"] / 60, 1)
+                dra = round(dra + 2 * settings["CROSSMATCH_RADIUS"] / 60, 1)
+                ddec = round(ddec + 2 * settings["CROSSMATCH_RADIUS"] / 60, 1)
                 fov = f"{dra:.1f}x{ddec:.1f}"
 
             else:
