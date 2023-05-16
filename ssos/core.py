@@ -99,7 +99,7 @@ class Pipeline:
             path_skybot = os.path.join(self.paths["cats"], "skybot_all.csv")
 
             if not self.args.skybot and os.path.isfile(path_skybot):
-                self.log.info("\rReading SkyBoT query results from file..")
+                self.log.info("\rReading SkyBoT query results from file.. ")
                 try:
                     self.skybot = pd.read_csv(path_skybot)
                 except pd.errors.EmptyDataError:
@@ -422,7 +422,7 @@ class Pipeline:
         self.log.info(
             f"Retrieved "
             f"{len(set(self.skybot.Name))} SSOs with "
-            f"{len(self.skybot)} detections\n"
+            f"{len(self.skybot)} detections.\n"
         )
         self.log.info(
             "\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n %s\n%sMv\n"
