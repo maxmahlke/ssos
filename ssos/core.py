@@ -821,8 +821,10 @@ class Pipeline:
                 for j, header in enumerate(cat):
                     if j % 2 == 0 and j != 0:
                         data = Table(header.data)[:][morphometry_columns]
-                        sextractor_data = sextractor_data.append(
-                            data.to_pandas(), ignore_index=True, sort=True
+                        sextractor_data = pd.concat(
+                            [sextractor_data, data.to_pandas()],
+                            ignore_index=True,
+                            sort=True,
                         )
 
         self.sources = pd.merge(
