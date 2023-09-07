@@ -44,7 +44,6 @@ class Pipeline:
     """Class to handle the pipeline execution"""
 
     def __init__(self):
-
         # Set-up command line parser
         self.args = utils.init_argparse()
 
@@ -112,7 +111,11 @@ class Pipeline:
 
             self.skybot.to_csv(path_skybot, index=False)
 
-            if not self.skybot.empty and len(self.skybot) > 1:
+            if (
+                not self.skybot.empty
+                and len(self.skybot) > 1
+                and not self.skybot.Mv.isnull().all()
+            ):
                 self._print_skybot_results()
             else:
                 self.log.info(" No known SSOs returned by SkyBoT.\n")
@@ -192,7 +195,6 @@ class Pipeline:
 
         # Write settings to logfile
         with open(os.path.join(self.paths["logs"], self.log_file), "a") as logfile:
-
             for setting, val in settings.items():
                 line = setting.ljust(20) + str(val) + "\n"
                 self.log.debug(line)
@@ -313,9 +315,9 @@ class Pipeline:
                 1 not in settings["DETECTIONS"] and 2 not in settings["DETECTIONS"]
             ):
                 raise PipelineSettingsException(
-                    f"When FILTER_MOTION is True, "
-                    f"DETECTIONS needs to contain "
-                    f'"1,2".'
+                    "When FILTER_MOTION is True, "
+                    "DETECTIONS needs to contain "
+                    '"1,2".'
                 )
 
         # Convert numeric values to float
@@ -343,10 +345,8 @@ class Pipeline:
                 )
 
         if settings["FILTER_BRIGHT_SOURCES"]:
-
             # Evaluate bright-sources catalogue path
             if settings["BRIGHT_SOURCES_CAT"] == "REFCAT":
-
                 # get the filename and column names from the scamp config file
                 with open(settings["SCAMP_CONFIG"], "r") as file:
                     for line in file:
@@ -387,6 +387,11 @@ class Pipeline:
         bins = np.arange(
             np.floor(min(self.skybot.Mv)), np.ceil(max(self.skybot.Mv)), 0.5
         )
+
+        # If all Mv values are within 0.5mag, the bins will be empty. Create at least
+        # two in this case.
+        if not bins:
+            bins = [min(self.skybot.Mv), min(self.skybot.Mv) + 0.5]
 
         counts = pd.cut(self.skybot["Mv"], bins).value_counts()
         counts.sort_index(inplace=True)
@@ -659,7 +664,6 @@ class Pipeline:
 
         def _clean_catalogue(catalogue, cat_number):
             with fits.open(self.SExtractor_catalogues[cat_number - 1]) as cat:
-
                 for extension, detections in catalogue.groupby("EXTENSION"):
                     extension *= 2  # extensions are HEADER and DATA
 
@@ -720,7 +724,6 @@ class Pipeline:
         """Wrapper to check if source candidates remain after filter step"""
 
         def wrapped_func(*args, **kwargs):
-
             result = func(*args, **kwargs)
 
             if not args[0].number_of_sources() > 0:
@@ -836,10 +839,8 @@ class Pipeline:
         self.added_SExtractor_data = True
 
     def add_image_metadata(self):
-
         # Derive image filename from SExtractor catalogue
         for cat_number, group in self.sources.groupby("CATALOG_NUMBER"):
-
             if self.settings["SCI_EXTENSION"]:
                 image_filename = (
                     "_".join(
@@ -858,7 +859,6 @@ class Pipeline:
 
         # Add image metadata. Have to use the correct header extension
         for image_filename, group in self.sources.groupby("IMAGE_FILENAME"):
-
             extension = group.EXTENSION.values[0] - 1
 
             # Add exposure keywords
