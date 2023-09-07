@@ -1,5 +1,5 @@
 name = "ssos"
-__version__ = "1.3.4"
+__version__ = "1.3.5"
 
 
 GREETING = (
@@ -13,7 +13,7 @@ GREETING = (
 O -     *        '    ssos [-PARAMETER] [-VALUE] path/to/images
 |                     ssos --inspect path/to/output : Inspect SSO candidates
         _..:'
-  +   (_.:            max.mahlke(at)oca.eu
+  +   (_.:            max.mahlke(at)ias.u-psud.fr
 
         """
     % __version__
